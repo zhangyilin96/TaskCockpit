@@ -1,0 +1,31 @@
+{
+  "project_name": "示例项目 C：客户反馈整理器",
+  "project_purpose": "把虚构的客户反馈整理成可核对的主题列表",
+  "current_goal": "完成首轮样本验证",
+  "current_state": "已建立本地原型，尚未完成样本验证",
+  "current_phase": "PROTOTYPE",
+  "completed_milestones": [
+    "完成本地原型首次运行"
+  ],
+  "in_progress": [
+    "整理 3 份虚构反馈样本"
+  ],
+  "open_issues": [
+    "短句反馈的主题归类仍需验证"
+  ],
+  "current_blockers": [],
+  "recommended_next_step": "使用 3 份虚构样本运行一次完整验证并记录差异",
+  "key_decisions": [
+    "公开 Demo 只使用虚构样本"
+  ],
+  "constraints": [
+    "不接入外部服务"
+  ],
+  "assets": [
+    "虚构反馈样本集"
+  ],
+  "important_context": [
+    "当前目标是验证流程，不是优化视觉"
+  ],
+  "parking_lot": []
+}

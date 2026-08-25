@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="description" content="Local First 的个人项目存档驾驶舱：保存项目状态、工作记录与 AI 上下文。" />
+    <meta name="application-name" content="项目存档驾驶舱 / Project OS" />
+    <title>项目存档驾驶舱</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" id="home-button" aria-label="返回主任务首页">
+          <span class="brand-mark">存</span>
+          <span><small>KISEKI 的 AI LAB / PROJECT OS</small><strong>项目存档驾驶舱</strong></span>
+        </button>
+        <div class="top-actions">
+          <span class="demo-environment-badge" id="demo-environment-badge" hidden>DEMO / 演示环境</span>
+          <span class="save-state"><i></i> 本地已保存</span>
+          <button class="soft-button" id="tools-button">技能库</button>
+          <button class="soft-button demo-mode-button" id="demo-mode-button">演示模式</button>
+          <button class="soft-button" id="reset-demo-button" hidden>重置演示数据</button>
+          <button class="soft-button" id="export-demo-button" hidden>导出演示状态</button>
+          <button class="soft-button header-action-button" id="export-button" title="导出当前本地项目数据（JSON 备份）" aria-label="导出当前本地项目数据（JSON 备份）"><span aria-hidden="true">⇩</span> 导出备份</button>
+          <button class="soft-button header-action-button" id="import-button" title="导入之前导出的 JSON 备份并恢复数据" aria-label="导入之前导出的 JSON 备份并恢复数据"><span aria-hidden="true">⇧</span> 导入备份</button>
+          <input id="backup-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </header>
+
+      <main id="app" tabindex="-1"></main>
+    </div>
+
+    <dialog id="add-dialog" class="modal modal-wide">
+      <form method="dialog" id="add-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">新建</p><h2 id="add-dialog-title">追加主任务</h2></div><button class="icon-button close" type="button" data-close-dialog="add-dialog" aria-label="关闭">×</button></div>
+        <div class="mode-tabs" role="tablist">
+          <button type="button" class="mode-tab is-active" data-add-mode="manual">手动建立</button>
+          <button type="button" class="mode-tab" data-add-mode="bootstrap">从 AI 对话导入</button>
+        </div>
+        <section id="manual-mode" class="mode-panel">
+          <label><span id="name-field-label">主任务名称</span><input id="manual-name" maxlength="80" placeholder="例如：工作、个人产品、学习" /><span class="field-error" id="manual-name-error" hidden>请输入项目名称</span></label>
+          <label><span id="purpose-field-label">方向说明</span><textarea id="manual-purpose" maxlength="300" placeholder="这个长期方向是什么？"></textarea></label>
+          <label><span id="goal-field-label">母目标</span><input id="manual-goal" maxlength="160" placeholder="这个方向长期要推进什么？" /></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog">取消</button><button class="primary-button" type="submit" id="create-submit">建立主任务</button></div>
+        </section>
+        <section id="bootstrap-mode" class="mode-panel" hidden>
+          <div class="instruction-card"><span class="step-number">1</span><div><strong>复制项目归档提示词</strong><p>发给原来的 ChatGPT、Codex、DeepSeek 或其他 AI 对话。</p></div><button type="button" class="soft-button" id="copy-bootstrap">复制提示词</button></div>
+          <label>AI 返回内容<textarea id="bootstrap-result" class="large-input" placeholder="把 AI 返回的完整 JSON 粘贴到这里……"></textarea></label>
+          <p class="form-hint">次级项目只接受提示词要求的 JSON；Markdown、代码块或前后说明会被拒绝，也不会写入任何数据。</p>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog">取消</button><button class="primary-button" type="button" id="parse-bootstrap">解析项目现状</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="preview-dialog" class="modal modal-wide">
+      <form method="dialog" id="preview-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">导入预览</p><h2>AI 识别出的项目现状</h2></div><button class="icon-button close" type="button" data-close-dialog="preview-dialog" aria-label="关闭">×</button></div>
+        <p class="form-hint" id="preview-message"></p>
+        <p class="form-hint">以下内容都是 AI 建议。每项都可以修改并单独决定是否写入；未勾选的字段不会进入新项目。</p>
+        <div class="preview-grid">
+          <label>项目名称<input id="preview-name" /></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-purpose" type="checkbox" checked /><strong>项目目的</strong><em>AI 建议</em></span><textarea id="preview-purpose"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-goal" type="checkbox" checked /><strong>当前目标</strong><em>AI 建议</em></span><textarea id="preview-goal"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-state" type="checkbox" checked /><strong>当前状态</strong><em>AI 建议</em></span><textarea id="preview-state"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-phase" type="checkbox" checked /><strong>当前阶段</strong><em>AI 建议</em></span><select id="preview-phase"><option value="">待确认</option><option value="IDEA">构想阶段</option><option value="EXPLORATION">探索阶段</option><option value="PROTOTYPE">原型阶段</option><option value="VALIDATION">验证阶段</option><option value="STABILIZATION">稳定化阶段</option><option value="DELIVERY">可交付阶段</option><option value="PAUSED">暂停 / 待重新评估</option></select></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-next" type="checkbox" checked /><strong>推荐下一步</strong><em>AI 建议</em></span><textarea id="preview-next" placeholder="最推荐的一项"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-completed" type="checkbox" /><strong>已完成成果</strong><em>AI 建议</em></span><textarea id="preview-completed" placeholder="每行一项"></textarea><small>默认不勾选。只有你确认存在完成、验证、通过或交付证据时才写入。</small></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-progress" type="checkbox" checked /><strong>正在进行</strong><em>AI 建议</em></span><textarea id="preview-progress" placeholder="每行一项"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-issues" type="checkbox" checked /><strong>当前问题</strong><em>AI 建议</em></span><textarea id="preview-issues" placeholder="每行一项"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-blockers" type="checkbox" checked /><strong>当前阻塞</strong><em>AI 建议</em></span><textarea id="preview-blockers" placeholder="只填写明确阻碍推进的问题，每行一项"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-decisions" type="checkbox" checked /><strong>关键决策</strong><em>AI 建议</em></span><textarea id="preview-decisions" placeholder="每行一项"></textarea></label>
+          <label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-memory" type="checkbox" checked /><strong>长期项目记忆</strong><em>AI 建议</em></span><textarea id="preview-memory" placeholder="每行一项"></textarea></label>
+        </div>
+        <details class="parsed-details"><summary>查看约束、资产与暂存事项</summary><div class="preview-grid"><label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-constraints" type="checkbox" checked /><strong>约束</strong><em>AI 建议</em></span><textarea id="preview-constraints" placeholder="每行一项"></textarea></label><label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-assets" type="checkbox" checked /><strong>资产</strong><em>AI 建议</em></span><textarea id="preview-assets" placeholder="每行一项"></textarea></label><label class="review-suggestion"><span class="review-suggestion-head"><input id="preview-apply-parking" type="checkbox" checked /><strong>暂存事项</strong><em>AI 建议</em></span><textarea id="preview-parking" placeholder="每行一项"></textarea></label></div></details>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="preview-dialog">返回</button><button class="primary-button" type="submit">确认导入</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="project-state-edit-dialog" class="modal modal-wide">
+      <form method="dialog" id="project-state-edit-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">人工确认</p><h2>编辑项目现状</h2></div><button class="icon-button close" type="button" data-close-dialog="project-state-edit-dialog" aria-label="关闭">×</button></div>
+        <p class="form-hint">这里保存的是你人工确认后的正式状态。AI 建议不会覆盖未确认内容。</p>
+        <div class="preview-grid">
+          <label>项目目的<textarea id="edit-project-purpose"></textarea></label>
+          <label>当前目标<textarea id="edit-project-goal"></textarea></label>
+          <label>当前状态<textarea id="edit-project-state"></textarea></label>
+          <label>当前阶段<select id="edit-project-phase"><option value="">待确认</option><option value="IDEA">构想阶段</option><option value="EXPLORATION">探索阶段</option><option value="PROTOTYPE">原型阶段</option><option value="VALIDATION">验证阶段</option><option value="STABILIZATION">稳定化阶段</option><option value="DELIVERY">可交付阶段</option><option value="PAUSED">暂停 / 待重新评估</option></select></label>
+          <label>已完成阶段<textarea id="edit-project-completed" placeholder="每行一项，只保留有明确完成证据的成果"></textarea></label>
+          <label>当前问题<textarea id="edit-project-issues" placeholder="每行一项"></textarea></label>
+          <label>当前阻塞<textarea id="edit-project-blockers" placeholder="每行一项，只填写明确阻碍推进的问题"></textarea></label>
+          <label>推荐下一步<textarea id="edit-project-next" placeholder="最推荐的一项"></textarea></label>
+        </div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="project-state-edit-dialog">取消</button><button class="primary-button" type="submit">保存人工状态</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="session-dialog" class="modal">
+      <form method="dialog" id="session-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">本次工作计划</p><h2>本次只推进这些</h2></div><button class="icon-button close" type="button" data-close-dialog="session-dialog" aria-label="关闭">×</button></div>
+        <label>本次目标<input id="session-goal" /><small class="field-guidance">描述这次工作完成后要达到的结果状态。</small></label>
+        <fieldset class="blocker-question">
+          <legend>今天还有什么未解决的问题？</legend>
+          <div class="radio-options">
+            <label><input id="session-blocker-none" name="session-blocker-choice" type="radio" value="NONE" checked /> 没有</label>
+            <label><input id="session-blocker-yes" name="session-blocker-choice" type="radio" value="YES" /> 有未解决问题</label>
+          </div>
+          <label id="session-blocker-input-panel" hidden>当前卡点、未验证问题或风险<textarea id="session-blocker-text" placeholder="例如：右 45° 角色生成仍偶尔发生镜像，痣的位置会左右交换。"></textarea></label>
+        </fieldset>
+        <label><span class="field-badge primary">主行动</span> 首要行动<input id="todo-primary" /></label>
+        <label><span class="field-badge optional">可选</span> 可选行动 1<input id="todo-optional-1" /></label>
+        <label><span class="field-badge optional">可选</span> 可选行动 2<input id="todo-optional-2" /></label>
+        <label class="demo-toggle" id="legacy-session-demo-toggle" hidden><input id="session-demo" type="checkbox" /> <span><strong>旧版单次演示</strong><small>仅用于兼容已有演示记录；新演示请使用右上角独立演示环境。</small></span></label>
+        <p class="form-hint">进行中事项永远不超过 3 项，待办池不会在本次工作中展开。</p>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="session-dialog">取消</button><button class="primary-button" type="submit">开始本次工作</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="blocker-dialog" class="modal">
+      <form method="dialog" id="blocker-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">项目阻塞</p><h2>记录一个问题</h2></div><button class="icon-button close" type="button" data-close-dialog="blocker-dialog" aria-label="关闭">×</button></div>
+        <label>问题描述<textarea id="blocker-text" class="large-input" placeholder="描述当前卡点、未验证问题或需要特别注意的风险……"></textarea></label>
+        <label>优先级<select id="blocker-priority"><option value="NORMAL">普通：记录但不自动改变主行动</option><option value="HIGH">高：下次计划优先验证这个问题</option></select></label>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="blocker-dialog">取消</button><button class="primary-button" type="submit">保存问题</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="stuck-dialog" class="modal modal-wide">
+      <form method="dialog" id="stuck-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">项目内求助</p><h2>我卡住了</h2></div><button class="icon-button close" type="button" data-close-dialog="stuck-dialog" aria-label="关闭">×</button></div>
+        <section id="stuck-input-panel">
+          <label>卡在哪里？<textarea id="stuck-problem" class="large-input" placeholder="用自然语言描述问题，不必整理。"></textarea></label>
+          <label>这次怎样算解决？<textarea id="stuck-criteria" placeholder="验收标准，可留空"></textarea></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="stuck-dialog">取消</button><button class="primary-button" type="submit">生成求助提示词</button></div>
+        </section>
+        <section id="stuck-output-panel" hidden>
+          <label>项目专属提示词<textarea id="stuck-output" class="prompt-output" readonly></textarea></label>
+          <p class="form-hint">只包含当前次级项目、主任务共享背景和本次工作，不会混入其他项目私有记忆。</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="back-to-stuck">修改问题</button><button class="soft-button" type="button" id="copy-stuck">复制提示词</button><button class="primary-button" type="button" id="save-stuck">保存本次提示词</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="status-review-dialog" class="modal modal-wide">
+      <form method="dialog" id="status-review-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">项目状态审查</p><h2>现状总结</h2></div><button class="icon-button close" type="button" data-close-dialog="status-review-dialog" aria-label="关闭">×</button></div>
+        <section id="status-review-input-panel">
+          <label>状态审查提示词<textarea id="status-review-output" class="prompt-output" readonly></textarea></label>
+          <p class="form-hint">只包含当前次级项目和允许共享的背景，并要求 AI 只返回一个可直接复制的 JSON 代码块。</p>
+          <div class="modal-actions"><button class="soft-button" type="button" id="copy-status-review">复制提示词</button><button class="text-button" type="button" id="save-status-review">保存到本次工作</button></div>
+          <div class="status-review-divider"></div>
+          <label>AI 返回结果<textarea id="status-review-result" class="large-input" placeholder="将 ChatGPT / Codex / DeepSeek 返回的 JSON 粘贴到这里……"></textarea></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="status-review-dialog">取消</button><button class="primary-button" type="button" id="parse-status-review">解析现状总结</button></div>
+        </section>
+        <section id="status-review-preview-panel" hidden>
+          <div class="result-preview-heading"><p class="eyebrow">AI 现状建议</p><h3>确认要更新的项目状态</h3></div>
+          <div id="status-review-preview" class="update-preview"></div>
+          <p class="form-hint">所有内容都是 AI 建议。每项都可修改并单独决定是否写入；未勾选的字段不会改变现有项目。</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="back-to-status-review">返回修改</button><button class="primary-button" type="button" id="confirm-status-review">确认更新项目</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="result-dialog" class="modal modal-wide">
+      <form method="dialog" id="result-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">AI 返回结果</p><h2>导入 AI 返回结果</h2></div><button class="icon-button close" type="button" data-close-dialog="result-dialog" aria-label="关闭">×</button></div>
+        <section id="result-input-panel">
+          <label>粘贴 AI 返回结果<textarea id="ai-result" class="large-input" placeholder="支持结构化文本或 JSON…"></textarea></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="result-dialog">取消</button><button class="primary-button" type="submit">生成更新预览</button></div>
+        </section>
+        <section id="result-preview-panel" hidden>
+          <div class="result-preview-heading"><p class="eyebrow">AI 更新建议</p><h3>确认要写回项目的内容</h3></div>
+          <div id="result-preview" class="update-preview"></div>
+          <fieldset class="result-apply-options"><legend>逐项确认</legend>
+            <label><input id="apply-progress-summary" type="checkbox" checked /> 更新当前状态</label>
+            <label><input id="apply-active-problems" type="checkbox" checked /> 更新仍在发生的问题</label>
+            <label><input id="apply-recommended-next" type="checkbox" checked /> 更新推荐下一步</label>
+            <label><input id="apply-memory-update" type="checkbox" checked /> 写入长期记忆</label>
+            <label><input id="apply-optional-backlog" type="checkbox" /> 把可选下一步加入待办池</label>
+          </fieldset>
+          <p class="form-hint">确认前不会修改当前状态、下一步、长期记忆或待办池。</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="back-to-result">返回修改</button><button class="primary-button" type="button" id="apply-result">确认更新</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="task-edit-dialog" class="modal">
+      <form method="dialog" id="task-edit-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow" id="task-edit-eyebrow">任务设置</p><h2 id="task-edit-title">编辑任务</h2></div><button class="icon-button close" type="button" data-close-dialog="task-edit-dialog" aria-label="关闭">×</button></div>
+        <label>名称<input id="task-edit-name" maxlength="80" /></label>
+        <label>定位说明<textarea id="task-edit-purpose" maxlength="300"></textarea></label>
+        <label><span id="task-edit-goal-label">当前目标</span><input id="task-edit-goal" maxlength="160" /></label>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="task-edit-dialog">取消</button><button class="primary-button" type="submit">保存修改</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="task-state-dialog" class="modal">
+      <form method="dialog" id="task-state-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">任务生命周期</p><h2 id="task-state-title">确认状态变化</h2></div><button class="icon-button close" type="button" data-close-dialog="task-state-dialog" aria-label="关闭">×</button></div>
+        <div id="task-state-message" class="state-change-message"></div>
+        <div class="lifecycle-help"><div><strong>暂停</strong><span>短期停止，完整保留项目脑，预计较快继续。</span></div><div><strong>冻结</strong><span>长期封存，不参与日常推荐和活跃统计。</span></div></div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="task-state-dialog">取消</button><button class="primary-button" type="submit" id="confirm-task-state">确认</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="task-delete-dialog" class="modal modal-wide">
+      <form method="dialog" id="task-delete-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow danger-eyebrow">永久删除任务</p><h2 id="task-delete-title">确认删除</h2></div><button class="icon-button close" type="button" data-close-dialog="task-delete-dialog" aria-label="关闭">×</button></div>
+        <div id="task-delete-message" class="danger-message"></div>
+        <div id="task-delete-children" class="cascade-list" hidden></div>
+        <div id="task-delete-links" class="link-warning" hidden></div>
+        <label>请输入任务名称以确认<input id="task-delete-name-confirm" autocomplete="off" /></label>
+        <p class="form-hint">此操作会立即物理删除，无法恢复，也不会进入 JSON 备份。</p>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="task-delete-dialog">取消</button><button class="danger-primary" type="submit" id="confirm-task-delete" disabled>永久删除</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="end-dialog" class="modal modal-wide">
+      <form method="dialog" id="end-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">本次工作总结</p><h2>结束本次工作</h2></div><button class="icon-button close" type="button" data-close-dialog="end-dialog" aria-label="关闭">×</button></div>
+        <div id="end-summary" class="summary-preview"></div>
+        <label>补充本次新发现<textarea id="end-discoveries" placeholder="每行一项，可留空"></textarea></label>
+        <label>下一步<input id="end-next-step" /></label>
+        <div class="modal-actions" id="formal-end-actions"><button class="text-button" type="button" data-close-dialog="end-dialog">继续工作</button><button class="primary-button" type="submit">保存工作总结</button></div>
+        <section id="demo-end-actions" class="demo-end-panel" hidden>
+          <p><strong>这是一次演示工作记录。</strong><br />是否将结果写入正式项目？</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="demo-end-keep">仅保存为演示记录</button><button class="primary-button" type="button" id="demo-end-promote">写入正式项目</button><button class="danger-primary" type="button" id="demo-end-delete">直接删除</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="link-dialog" class="modal">
+      <form method="dialog" id="link-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">背景共享边界</p><h2>管理关联主任务</h2></div><button class="icon-button close" type="button" data-close-dialog="link-dialog" aria-label="关闭">×</button></div>
+        <label>关联到<select id="link-target"></select></label>
+        <fieldset class="scope-fieldset"><legend>允许共享</legend>
+          <label><input type="checkbox" name="link-scope" value="SHARE_PROGRESS"> 项目里程碑与总体进度</label>
+          <label><input type="checkbox" name="link-scope" value="SHARE_CONTENT"> 发布内容</label>
+          <label><input type="checkbox" name="link-scope" value="SHARE_METRICS"> 内容表现数据</label>
+          <label><input type="checkbox" name="link-scope" value="SHARE_MEMORY"> 主任务共享记忆</label>
+        </fieldset>
+        <p class="form-hint">项目私有记忆、技术调试、源代码、内部提示词和完整工作记录默认不共享。</p>
+        <div class="modal-actions"><button class="danger-button" type="button" id="remove-link">设为隔离</button><button class="text-button" type="button" data-close-dialog="link-dialog">取消</button><button class="primary-button" type="submit">保存关联</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="tools-dialog" class="modal modal-wide">
+      <form method="dialog" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">外部能力资产</p><h2>技能库</h2></div><button class="icon-button close" type="button" data-close-dialog="tools-dialog" aria-label="关闭">×</button></div>
+        <div id="skill-library-content"></div>
+      </form>
+    </dialog>
+
+    <dialog id="skill-dialog" class="modal modal-wide">
+      <form method="dialog" id="skill-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">能力资产</p><h2>手动添加技能</h2></div><button class="icon-button close" type="button" data-close-dialog="skill-dialog" aria-label="关闭">×</button></div>
+        <div class="preview-grid">
+          <label>名称<input id="skill-name" placeholder="例如：Character Consistency Pipeline" /></label>
+          <label>类型<select id="skill-type"><option value="installed">第三方</option><option value="self">自建</option><option value="external">外部工具</option></select></label>
+          <label>简介<textarea id="skill-description" placeholder="这个能力可以帮助什么？"></textarea></label>
+          <label>来源<input id="skill-source" placeholder="GitHub、本地、自建…" /></label>
+          <label>安装路径（可选）<input id="skill-path" /></label>
+          <label>代码仓库地址（可选）<input id="skill-repository" /></label>
+          <label>版本（可选）<input id="skill-version" /></label>
+          <label>标签<input id="skill-tags" placeholder="用逗号分隔" /></label>
+        </div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="skill-dialog">取消</button><button class="primary-button" type="submit">保存到技能库</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="project-skills-dialog" class="modal">
+      <form method="dialog" id="project-skills-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">项目常用能力</p><h2>管理常用技能</h2></div><button class="icon-button close" type="button" data-close-dialog="project-skills-dialog" aria-label="关闭">×</button></div>
+        <div id="project-skill-options" class="scope-fieldset"></div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="project-skills-dialog">取消</button><button class="primary-button" type="submit">保存常用技能</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="backup-preview-dialog" class="modal">
+      <form method="dialog" id="backup-preview-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">完整项目存档</p><h2>导入预览</h2></div><button class="icon-button close" type="button" data-close-dialog="backup-preview-dialog" aria-label="关闭">×</button></div>
+        <div id="backup-preview-content" class="summary-preview"></div>
+        <p class="form-hint"><strong>导入会覆盖当前本地数据，是否继续？</strong><br />确认前不会写入；建议先导出当前本地备份。</p>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="backup-preview-dialog">取消</button><button class="primary-button" type="submit">确认导入</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-history-dialog" class="modal">
+      <form method="dialog" id="delete-history-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow danger-eyebrow">永久删除</p><h2 id="delete-history-title">删除工作历史</h2></div><button class="icon-button close" type="button" data-close-dialog="delete-history-dialog" aria-label="关闭">×</button></div>
+        <div id="delete-history-message" class="danger-message"></div>
+        <label id="clear-project-memory-option" class="danger-check" hidden><input id="clear-project-memory" type="checkbox" /> 同时清空项目记忆</label>
+        <p class="form-hint">已永久删除的数据不会进入回收站，也不会出现在后续 AI 上下文或 JSON 备份中。</p>
+        <div class="modal-actions" id="standard-delete-actions"><button class="text-button" type="button" data-close-dialog="delete-history-dialog">取消</button><button class="danger-primary" type="submit">永久删除</button></div>
+        <div class="modal-actions" id="last-history-initial-actions" hidden><button class="text-button" type="button" data-close-dialog="delete-history-dialog">取消</button><button class="danger-primary" type="button" id="continue-last-history-delete">继续</button></div>
+        <section id="last-history-choice" hidden>
+          <label class="danger-check"><input id="keep-project-after-last-history" type="checkbox" /> <strong>即使没有工作记录，也单独保留这个项目</strong></label>
+          <p class="form-hint">不勾选：删除最后一条历史并永久删除次级项目。勾选：保留项目名称与长期资料，但把工作状态重置为“尚未开始 / 无工作记录”。</p>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="delete-history-dialog">取消</button><button class="danger-primary" type="button" id="confirm-last-history-delete">确认永久删除</button></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="enter-demo-dialog" class="modal">
+      <form method="dialog" novalidate>
+        <div class="modal-head"><div><p class="eyebrow demo-eyebrow">独立工作区</p><h2>进入演示模式</h2></div><button class="icon-button close" type="button" data-close-dialog="enter-demo-dialog" aria-label="关闭">×</button></div>
+        <div class="demo-confirm-message"><strong>即将进入演示环境。</strong><p>演示环境与正式项目完全隔离，所有操作不会影响你的真实项目存档。</p></div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="enter-demo-dialog">取消</button><button class="demo-primary" type="button" id="confirm-enter-demo">进入演示模式</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="reset-demo-dialog" class="modal">
+      <form method="dialog" novalidate>
+        <div class="modal-head"><div><p class="eyebrow demo-eyebrow">演示环境</p><h2>重置演示数据</h2></div><button class="icon-button close" type="button" data-close-dialog="reset-demo-dialog" aria-label="关闭">×</button></div>
+        <div class="demo-confirm-message"><strong>确定清空全部演示数据并恢复初始 Demo 状态吗？</strong><p>只会重置演示工作区，正式项目存档不会改变。</p></div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="reset-demo-dialog">取消</button><button class="danger-primary" type="button" id="confirm-reset-demo">重置演示数据</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="export-dialog" class="modal">
+      <form method="dialog" id="export-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">完整项目存档</p><h2>导出 JSON 备份</h2></div><button class="icon-button close" type="button" data-close-dialog="export-dialog" aria-label="关闭">×</button></div>
+        <p class="form-hint">默认只导出正式工作区。已永久删除的数据永远不会导出。</p>
+        <label class="demo-toggle"><input id="export-include-demo" type="checkbox" /> <span><strong>包含演示工作区</strong><small>额外包含独立 Demo Workspace 的主任务、项目、工作记录和提示词。</small></span></label>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="export-dialog">取消</button><button class="primary-button" type="submit">导出完整备份</button></div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="storage.js"></script>
+    <script src="lifecycle.js"></script>
+    <script src="planning.js"></script>
+    <script src="bootstrap.js"></script>
+    <script src="ai-workflow.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

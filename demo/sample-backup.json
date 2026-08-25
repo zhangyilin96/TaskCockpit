@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "workspaceMode": "demo",
+  "exportedAt": "2026-08-25T00:00:00.000Z",
+  "workspace": {
+    "schemaVersion": 2,
+    "version": "2.9",
+    "workspaceId": "demo",
+    "zones": [
+      {
+        "id": "demo-zone-public-a",
+        "workspaceId": "demo",
+        "name": "示例主任务 A",
+        "purpose": "虚构的产品开发演示",
+        "motherGoal": "完成一次从原型到验证的演示闭环",
+        "summary": "示例原型已完成首次运行",
+        "color": "#7067a8",
+        "status": "ACTIVE",
+        "projects": [
+          {
+            "id": "demo-project-public-a",
+            "workspaceId": "demo",
+            "name": "示例项目 A：会议摘要工具",
+            "purpose": "演示项目恢复、Session 与 AI JSON 回写",
+            "goal": "验证摘要结果是否稳定",
+            "currentState": "已完成首次本地运行，等待样本验证",
+            "currentPhase": "PROTOTYPE",
+            "completed": [
+              "完成本地原型首次运行"
+            ],
+            "inProgress": [
+              "整理验证样本"
+            ],
+            "openIssues": [
+              "不同格式的会议记录仍需测试"
+            ],
+            "blockers": [],
+            "nextActions": [
+              "使用 3 份虚构样本验证摘要一致性"
+            ],
+            "projectMemory": [],
+            "decisions": [
+              "所有公开演示只使用虚构数据"
+            ],
+            "constraints": [
+              "不连接外部服务"
+            ],
+            "assets": [],
+            "backlog": [],
+            "parkingLot": [],
+            "sessions": [],
+            "status": "ACTIVE",
+            "createdAt": "2026-08-25T00:00:00.000Z",
+            "updatedAt": "2026-08-25T00:00:00.000Z"
+          }
+        ],
+        "sharedMemory": [],
+        "createdAt": "2026-08-25T00:00:00.000Z",
+        "updatedAt": "2026-08-25T00:00:00.000Z"
+      }
+    ],
+    "zoneLinks": [],
+    "contextEvents": [],
+    "skills": [],
+    "settings": {
+      "storageMode": "indexeddb",
+      "syncMode": "local-only",
+      "workspaceMode": "demo"
+    },
+    "createdAt": "2026-08-25T00:00:00.000Z",
+    "updatedAt": "2026-08-25T00:00:00.000Z"
+  }
+}

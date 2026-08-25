@@ -1,0 +1,26 @@
+{
+  "name": "task-cockpit",
+  "version": "0.1.0",
+  "description": "项目存档驾驶舱 / Project OS：Windows 本地优先的个人项目状态与工作记录控制台。",
+  "license": "MIT",
+  "author": "kiseki 的 AI Lab",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhangyilin96/TaskCockpit.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check.mjs",
+    "check:public": "node scripts/public-audit.mjs"
+  },
+  "keywords": [
+    "local-first",
+    "project-management",
+    "ai-workflow",
+    "windows"
+  ]
+}
