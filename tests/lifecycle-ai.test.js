@@ -31,6 +31,30 @@ test("只有 ACTIVE 任务参与日常推荐", () => {
   assert.equal(lifecycle.isRecommendable({ status:"COMPLETED" }), false);
 });
 
+test("本周专注只累计人工确认且在本地周内结束的分钟数", () => {
+  const weekStart=new Date("2026-08-24T00:00:00+09:00").getTime();
+  const weekEnd=new Date("2026-08-31T00:00:00+09:00").getTime();
+  const sessions=[
+    {endedAt:"2026-08-26T02:00:00.000Z",focusMinutes:45,timeConfirmedAt:"2026-08-26T02:01:00.000Z"},
+    {startedAt:"2026-08-26T03:00:00.000Z",endedAt:"2026-08-26T05:00:00.000Z"},
+    {endedAt:"2026-08-20T02:00:00.000Z",focusMinutes:90,timeConfirmedAt:"2026-08-20T02:01:00.000Z"},
+    {endedAt:"2026-08-27T02:00:00.000Z",focusMinutes:30,timeConfirmedAt:"2026-08-27T02:01:00.000Z"}
+  ];
+  assert.equal(lifecycle.confirmedFocusMinutes(sessions,weekStart,weekEnd),75);
+  assert.equal(lifecycle.confirmedFocusSessions(sessions,weekStart,weekEnd).length,2);
+});
+
+test("今日总结按本地日期纳入当天创建、更新或结束的 Session", () => {
+  const at=(day,hour)=>new Date(2026,7,day,hour,0,0).toISOString();
+  const sessions=[
+    {id:"started-today",startedAt:at(26,9)},
+    {id:"updated-today",startedAt:at(25,9),updatedAt:at(26,10)},
+    {id:"ended-today",startedAt:at(25,9),endedAt:at(26,11)},
+    {id:"other-day",startedAt:at(25,9),updatedAt:at(25,10)}
+  ];
+  assert.deepEqual(lifecycle.sessionsForLocalDay(sessions,new Date(2026,7,26,18)).map(session=>session.id),["started-today","updated-today","ended-today"]);
+});
+
 test("用户暂停或冻结的空项目不会被 Orphan Check 误删", () => {
   const base={sessions:[],projectMemory:[],assets:[],completed:[],backlog:[],parkingLot:[],openIssues:[],decisions:[],constraints:[],inProgress:[],nextActions:[],currentState:"刚刚建立，尚未开始第一轮工作。"};
   assert.equal(lifecycle.isOrphanProject({ ...base,status:"ACTIVE" }), true);

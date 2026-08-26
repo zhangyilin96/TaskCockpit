@@ -2,7 +2,8 @@
   const DB_NAME = "project-archive-cockpit";
   const DB_VERSION = 1;
   const LEGACY_WORKSPACE_ID = "primary-workspace";
-  const WORKSPACE_MODES = { NORMAL: "normal", DEMO: "demo" };
+  const WORKSPACE_MODES = { NORMAL: "normal", DEMO: "demo", JPR_DEMO: "jpr-demo" };
+  const SESSION_DRAFT_STORAGE_KEY = "project-os:session-drafts:v1";
   const STORES = ["workspace", "zones", "projects", "sessions", "memories", "contextLinks", "skills", "settings"];
   const ENTITY_STORES = STORES.filter(name => name !== "workspace");
 
@@ -33,10 +34,10 @@
       return payload;
     }
 
-    exportDemoState(demoWorkspace) {
+    exportDemoState(demoWorkspace, workspaceMode = demoWorkspace?.workspaceId || WORKSPACE_MODES.DEMO) {
       return {
         schemaVersion: 2,
-        workspaceMode: WORKSPACE_MODES.DEMO,
+        workspaceMode,
         exportedAt: new Date().toISOString(),
         workspace: backupWorkspace(demoWorkspace, true)
       };
@@ -155,6 +156,39 @@
     async saveWorkspace(data, workspaceId = WORKSPACE_MODES.NORMAL) { this.workspaces.set(workspaceId, clone(data)); }
   }
 
+  class SessionDraftStore {
+    constructor(storage) { this.storage = storage; }
+    recordKey(workspaceId, sessionId) { return `${workspaceId}:${sessionId}`; }
+    readAll() {
+      try { return JSON.parse(this.storage?.getItem(SESSION_DRAFT_STORAGE_KEY) || "{}") || {}; }
+      catch { return {}; }
+    }
+    writeAll(records) {
+      try { this.storage?.setItem(SESSION_DRAFT_STORAGE_KEY, JSON.stringify(records)); return true; }
+      catch { return false; }
+    }
+    save(record = {}) {
+      if (!record.workspaceId || !record.sessionId) return false;
+      const records = this.readAll();
+      records[this.recordKey(record.workspaceId, record.sessionId)] = clone(record);
+      return this.writeAll(records);
+    }
+    load(workspaceId, sessionId) {
+      const record = this.readAll()[this.recordKey(workspaceId, sessionId)];
+      return record ? clone(record) : null;
+    }
+    remove(workspaceId, sessionId) {
+      const records = this.readAll();
+      delete records[this.recordKey(workspaceId, sessionId)];
+      return this.writeAll(records);
+    }
+    clearWorkspace(workspaceId) {
+      const records = this.readAll();
+      Object.keys(records).filter(key => key.startsWith(`${workspaceId}:`)).forEach(key => delete records[key]);
+      return this.writeAll(records);
+    }
+  }
+
   class CloudAdapterStub extends StorageAdapter {
     constructor() { super(); this.enabled = false; }
     async loadWorkspace() { return null; }
@@ -173,6 +207,7 @@
   }
 
   function createStorageAdapter() { return "indexedDB" in window ? new IndexedDBAdapter() : new MemoryStorageAdapter(); }
+  function createSessionDraftStore(storage = window.localStorage) { return new SessionDraftStore(storage); }
 
-  window.ProjectOSStorage = { StorageAdapter, IndexedDBAdapter, MemoryStorageAdapter, CloudAdapterStub, SyncProviderStub, SkillDiscoveryProviderStub, createStorageAdapter, backupWorkspace, DB_NAME, DB_VERSION, STORES, WORKSPACE_MODES };
+  window.ProjectOSStorage = { StorageAdapter, IndexedDBAdapter, MemoryStorageAdapter, SessionDraftStore, CloudAdapterStub, SyncProviderStub, SkillDiscoveryProviderStub, createStorageAdapter, createSessionDraftStore, backupWorkspace, DB_NAME, DB_VERSION, STORES, WORKSPACE_MODES, SESSION_DRAFT_STORAGE_KEY };
 })();

@@ -1,14 +1,15 @@
-# v2.9 数据模型
+# v2.10 数据模型
 
 ## 双工作区结构
 
 ```text
 IndexedDB: project-archive-cockpit
 ├─ workspace:normal → 正式 State
-└─ workspace:demo   → 演示 State
+├─ workspace:demo   → 通用演示 State
+└─ workspace:jpr-demo → JPR 专用演示 State
 ```
 
-两套 State 使用相同结构，但实体都带 `workspaceId: "normal" | "demo"`，按工作区独立保存和读取。
+三套 State 使用相同结构，但实体都带 `workspaceId: "normal" | "demo" | "jpr-demo"`，按工作区独立保存和读取。
 
 ```text
 State
@@ -18,6 +19,7 @@ State
 │     └─ sessions[]
 ├─ zoneLinks[]
 ├─ contextEvents[]
+├─ inspirations[]
 ├─ skills[]
 ├─ settings
 ├─ createdAt
@@ -27,10 +29,27 @@ State
 核心边界：
 
 ```text
-Normal Workspace ≠ Demo Workspace
+Normal Workspace ≠ Demo Workspace ≠ JPR Demo Workspace
 Zone Shared Memory ≠ Project Memory ≠ Session History
 Zone ≠ Project ≠ Session
+Workspace Inspiration ≠ Project Parking Lot / Backlog
 ```
+
+## Workspace 灵感 Inspiration
+
+```text
+Inspiration
+├─ id, workspaceId, text
+├─ source: dashboard | session
+├─ zoneId, projectId, sessionId       ← 可选来源引用
+├─ zoneName, projectName              ← 来源名称快照
+├─ orbPresetId                         ← 稳定绑定的四种 AI 球预设之一
+├─ aiState: idle | thinking | ready | attention | error
+├─ aiSummary, aiUpdatedAt              ← 可选 AI 反馈与更新时间
+└─ createdAt, updatedAt
+```
+
+`inspirations[]` 保存尚未成为任务的 Workspace 级想法。首页与 Session 都可以显式添加；项目的 `parkingLot[]`、Session 的 `parkingAdded[]` 不会自动迁移、复制或汇总到灵感库。三套 Workspace 各自保存独立的 `inspirations[]`。`orbPresetId` 是灵感的视觉身份，不随 AI 状态改变；`aiState` 控制有限的速度、光晕与形变反馈，并同步进入球卡片的可访问标签，球面不覆盖文字。旧数据缺少这些字段时会在读取阶段获得稳定的球预设和 `idle` 状态。
 
 ## 主任务 Zone
 
@@ -56,7 +75,7 @@ Project
 ├─ name, purpose, goal, currentState, currentPhase, currentProgressSummary
 ├─ status: ACTIVE | PAUSED | FROZEN | COMPLETED
 ├─ completed[], importedMilestones[], inProgress[], nextActions[]
-├─ decisions[], constraints[], openIssues[]
+├─ decisions[], constraints[], openIssues[], resolvedIssues[]
 ├─ blockers[], blockerReviewPending
 ├─ snapshotMeta
 ├─ assets[], backlog[], parkingLot[]
@@ -73,6 +92,7 @@ Project
 - `importedMilestones[]` 保存从旧 AI 对话确认导入的历史成果，包含 `summary`、`source: "AI_BOOTSTRAP"`、`importedAt` 和可选 `originalDate`。它不伪装成 Session History。
 - `snapshotMeta` 记录 Snapshot 的来源、导入时间和状态是 AI 明确给出还是本地保守派生。
 - `blockerReviewPending: true` 表示存在 Open Issues，但没有证据可把它们直接判定为 Blocker。
+- `openIssues[]` 与 `resolvedIssues[]` 分别保存未解决和已解决的问题标签；用户可勾选切换状态，也可用 `×` 物理删除单条问题。
 - `nonSessionUpdatedAt` 区分用户直接保存的项目状态与 Session 派生更新时间，便于删除历史后回算。
 - 同一 Zone 下的项目可以读取 Zone Shared Memory，但不能读取其他项目的私有 Memory、提示词和工作历史。
 
@@ -81,8 +101,9 @@ Project
 ```text
 Session
 ├─ id, workspaceId, projectId
-├─ status: RUNNING | ENDED
-├─ startedAt, endedAt
+├─ status: RUNNING | PAUSED | ENDED
+├─ startedAt, pausedAt, resumedAt, endedAt
+├─ focusMinutes, timeConfirmedAt, timeEntryMode
 ├─ source: manual | ai | demo
 ├─ title
 ├─ originType: PROJECT_CREATED | PROJECT_IMPORT | null
@@ -90,7 +111,7 @@ Session
 │  ├─ currentState, goal, completed[], nextStep
 │  └─ importedAt, source
 ├─ bootstrapJson | null
-├─ goal, todos[], notes
+├─ goal, todos[], notes, drafts
 ├─ blockerIds[]
 ├─ generatedPrompts[], importedResults[]
 ├─ formalContributions
@@ -101,6 +122,14 @@ Session
 ```
 
 新建 Session 是否属于演示环境由 `workspaceId` 决定。`isDemo` 与 `promotedToFormal` 只用于读取和治理 v2.3 / v2.4 旧版单次演示记录。
+
+- `PAUSED` 只表示本次工作暂时离开，不改变 Project / Zone 生命周期，也不引入暂停计时；重新进入同一 Session 时恢复为 `RUNNING`。
+- 结束 Session 时，系统预填本地开始/结束时间，用户可修改并必须确认；确认后写入 `focusMinutes`、`timeConfirmedAt` 与 `timeEntryMode: "MANUAL_CONFIRMED"`。
+- “本周专注”只合计本地周内结束且存在人工确认记录的 `focusMinutes`。旧 Session、运行中 Session 和未确认时长的 Session 不计入。
+- 本口径不记录后台暂停区间；用户通过结束时修正开始/结束时间来确认最终分钟数。跨周 Session 当前按确认后的结束时间归入一周，不拆分重叠区间。
+- `drafts` 保存未确认的求助输入、现状总结、工作总结、结束总结、项目暂存输入和灵感输入。活动 Session 同时在 `localStorage` 保存按 `workspaceId + sessionId` 隔离的恢复镜像，以覆盖页面意外退出时 IndexedDB 写入尚未完成的窗口。
+- “总结工作”的 AI 返回使用完整 Project Snapshot 字段，但只作为 `PROJECT_UPDATE` 建议写入当前 Session；必须通过 `project_name` 身份校验和逐字段人工确认，不会调用 Project 创建流程。
+- Session 结束、删除或 Demo Workspace 重置时，对应恢复镜像会清理。
 
 - 手动建立 Project 时立即创建已结束的 `No.1 · 项目建立`，`originType: "PROJECT_CREATED"`。
 - AI 导入 Project 时立即创建已结束的 `No.1 · 项目导入`，`originType: "PROJECT_IMPORT"`，并保存用户确认后的初始 Snapshot 与原始 `bootstrapJson`。
@@ -117,7 +146,7 @@ COMPLETED → 已完成 → 可查看存档、重新开启、删除
 
 - PAUSED、FROZEN 和 COMPLETED 完整保留任务数据，但不参与今日建议、最近活跃和活跃项目统计。
 - 重新开启只把原实体切回 ACTIVE 并更新 `updatedAt`，不会创建新 Zone / Project。
-- Project / Zone 生命周期和 Session 的 RUNNING / ENDED 相互独立。
+- Project / Zone 生命周期和 Session 的 RUNNING / PAUSED / ENDED 相互独立。
 - 旧 `paused: true` 在读取时迁移为 PAUSED；后续以 `status` 为权威字段。
 
 `formalContributions` 记录该 Session 直接贡献到 Project 的 Completed、Next Action、Open Issues、可回滚 Current State 和 Current Progress Summary。删除 Session 时据此移除临时派生；正式写入 Project Memory、Decisions 或 Assets 的内容默认保留。
@@ -222,6 +251,8 @@ ZoneLink
 
 支持进度、内容、指标和 Zone Shared Memory 白名单。Project Memory、完整 Session、技术调试、源代码和内部提示词不因关联自动传播。
 
+当前没有 `ProjectLink` 实体或“次级项目 ↔ 次级项目”直接关联设置；两个次级项目需要先通过各自所属的主任务建立 ZoneLink。首页的今日总结只读取当前 Workspace 内当天 Session 与其所属 Project，不会跨 ZoneLink 合并另一工作区或另一项目的私有记忆。
+
 ## 技能 Skill
 
 ```text
@@ -240,10 +271,10 @@ Skill
 
 - 数据库：`project-archive-cockpit`。
 - 对象仓库：`workspace`、`zones`、`projects`、`sessions`、`memories`、`contextLinks`、`skills`、`settings`。
-- 聚合键：`workspace:normal`、`workspace:demo`。
+- 聚合键：`workspace:normal`、`workspace:demo`、`workspace:jpr-demo`。
 - 拆分实体使用工作区前缀的存储键，并保留原 `entityId` 与 `workspaceId`，因此保存 Demo 时不会清空 Normal，反之亦然。
 - 旧 `primary-workspace` 只作为迁移读取来源。
-- localStorage 只保存界面偏好和当前工作区模式，并读取旧版迁移键。
+- localStorage 分别保存标准页与 JPR 页的界面偏好、活动 Session 草稿恢复镜像；只有标准页保存当前工作区模式。JPR 页面固定进入 `workspace:jpr-demo`，并继续读取必要的旧版迁移键。
 
 ## 备份结构
 

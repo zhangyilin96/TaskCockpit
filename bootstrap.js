@@ -18,7 +18,7 @@
   function asList(value) {
     const source=Array.isArray(value)?value:value==null?[]:String(value).split(/\r?\n|；|;|•/);
     return source.map(item=>{
-      if(typeof item==="string")return item.replace(/^[-*\d.、\s]+/,"").trim();
+      if(typeof item==="string")return item.replace(/^(?:[-*]\s*|\d+[.、)]\s*)/,"").trim();
       return cleanText(item?.summary||item?.text||item?.name||"");
     }).filter(item=>item&&!EMPTY_VALUES.has(item.toLowerCase()));
   }
@@ -124,6 +124,29 @@
       memoryUpdates:dedupeList(pick(json,"memory_update","MEMORY_UPDATE")),changes:[],verification:[],discoveries:[],decisions:[]
     }};
   }
+  function parseProjectUpdateJson(raw,updatedAt=new Date().toISOString()) {
+    const parsed=strictJson(raw);if(!parsed.ok)return parsed;
+    const json=parsed.value;
+    const updateKeys=["project_name","project_purpose","current_goal","current_state","current_phase","completed_milestones","in_progress","open_issues","current_blockers","recommended_next_step","key_decisions","constraints","assets","important_context","parking_lot"];
+    if(Object.prototype.hasOwnProperty.call(json,"current_state_summary")&&!Object.prototype.hasOwnProperty.call(json,"project_name"))return{ok:false,code:"STATUS_REVIEW_SHAPE",error:"检测到的是“现状总结”JSON，不是“总结工作”的完整项目结构。请使用当前弹窗中的总结工作提示词重新生成。"};
+    if(!updateKeys.some(key=>Object.prototype.hasOwnProperty.call(json,key)))return{ok:false,code:"PROJECT_UPDATE_FIELDS_MISSING",error:"JSON 中没有识别到完整项目更新字段，请使用总结工作提示词要求的结构。"};
+    const snapshot=parseProjectBootstrap(raw,updatedAt);if(!snapshot.ok)return snapshot;
+    const value=snapshot.value;
+    const projectName=cleanText(pick(json,"project_name","PROJECT_NAME","name"));
+    const projectPurpose=cleanText(pick(json,"project_purpose","PROJECT_PURPOSE","purpose"));
+    const currentGoal=cleanText(pick(json,"current_goal","CURRENT_GOAL","goal"));
+    const currentState=cleanText(pick(json,"current_state","CURRENT_STATE","currentState"));
+    const currentPhase=normalizePhase(pick(json,"current_phase","CURRENT_PHASE"));
+    if(!projectName)return{ok:false,code:"PROJECT_NAME_MISSING",error:"JSON 缺少 project_name，无法确认回答属于哪个项目。"};
+    return{ok:true,value:{
+      raw:cleanText(raw),resultType:"PROJECT_UPDATE",projectName,projectPurpose,currentGoal,
+      currentStateSummary:currentState?[currentState]:[],progressSummary:currentState?[currentState]:[],progressPhase:currentPhase,progressJudgement:"",
+      completed:value.completed,inProgress:value.inProgress,activeProblems:value.openIssues,currentBlockers:value.currentBlockers,
+      recommendedNextStep:value.recommendedNextStep,nextStep:value.recommendedNextStep,optionalNextSteps:[],shouldStopOrDefer:[],
+      decisions:value.decisions,constraints:value.constraints,assets:value.assets,memoryUpdates:value.projectMemory,parkingLot:value.parkingLot,
+      remainingIssues:[],changes:[],verification:[],discoveries:[]
+    }};
+  }
   function phaseLabel(value){return PHASE_LABELS[normalizePhase(value)]||"待确认阶段"}
-  window.ProjectOSBootstrap={PHASE_LABELS,asList,dedupeList,dedupeTodos,strictJson,normalizePhase,inferPhase,phaseLabel,makeImportedMilestones,parseProjectBootstrap,parseStatusReviewJson};
+  window.ProjectOSBootstrap={PHASE_LABELS,asList,dedupeList,dedupeTodos,strictJson,normalizePhase,inferPhase,phaseLabel,makeImportedMilestones,parseProjectBootstrap,parseStatusReviewJson,parseProjectUpdateJson};
 })();

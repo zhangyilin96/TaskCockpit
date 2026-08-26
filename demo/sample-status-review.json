@@ -1,27 +1,34 @@
 {
-  "current_state_summary": "本地原型已经能够处理虚构样本，但不同输入格式的一致性仍未验证。",
+  "project_name": "示例项目 A：会议摘要工具",
+  "project_purpose": "用虚构会议记录验证本地摘要流程。",
+  "current_goal": "使用不同格式的虚构样本验证摘要一致性。",
+  "current_state": "本地原型已经能够处理虚构样本，但不同输入格式的一致性仍未验证。",
+  "current_phase": "VALIDATION",
   "completed_milestones": [
     "完成本地原型首次运行"
   ],
   "in_progress": [
     "整理验证样本"
   ],
-  "active_problems": [
+  "open_issues": [
     "不同格式的会议记录可能产生不一致摘要"
   ],
   "current_blockers": [],
-  "progress_judgement": {
-    "phase": "VALIDATION",
-    "reason": "核心流程已运行，但稳定性证据不足"
-  },
   "recommended_next_step": "使用 3 份虚构样本验证摘要一致性并记录差异",
-  "optional_next_steps": [
+  "key_decisions": [
+    "公开演示只使用虚构样本"
+  ],
+  "constraints": [
+    "不得导入真实会议记录"
+  ],
+  "assets": [
+    "本地摘要原型"
+  ],
+  "important_context": [
+    "不同输入格式的一致性仍需验证"
+  ],
+  "parking_lot": [
+    "界面美化",
     "整理失败样本的输入特征"
-  ],
-  "should_stop_or_defer": [
-    "暂缓界面美化"
-  ],
-  "memory_update": [
-    "公开演示始终使用虚构样本"
   ]
 }

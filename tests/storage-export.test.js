@@ -21,6 +21,7 @@ function fixture() {
         ]
       }]
     }],
+    inspirations: [{ id: "idea-1", text: "独立灵感", source: "dashboard" }],
     skills: [{ id: "skill-1" }],
     zoneLinks: [{ id: "link-1" }]
   };
@@ -34,6 +35,7 @@ test("正式备份默认排除演示和已删除 Session", async () => {
   assert.deepEqual(backup.workspace.zones[0].projects[0].sessions.map(item => item.id), ["formal-1"]);
   assert.equal(backup.workspace.skills.length, 1);
   assert.equal(backup.workspace.zoneLinks.length, 1);
+  assert.equal(backup.workspace.inspirations[0].text, "独立灵感");
 });
 
 test("勾选后附加独立演示工作区，正式工作区仍排除旧版演示记录", async () => {

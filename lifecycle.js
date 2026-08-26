@@ -8,6 +8,35 @@
   const formalSessions = project => list(project.sessions).filter(session => !session.isDemo || session.promotedToFormal);
   const activeSessions = project => list(project.sessions).filter(session => !session.endedAt);
 
+  function localDayKey(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toDateString() : "";
+  }
+
+  function sessionsForLocalDay(sessions, referenceDate = new Date()) {
+    const dayKey = localDayKey(referenceDate);
+    if (!dayKey) return [];
+    return list(sessions).filter(session => [session?.startedAt,session?.endedAt,session?.updatedAt,session?.createdAt]
+      .some(value => value && localDayKey(value) === dayKey));
+  }
+
+  function confirmedFocusSessions(sessions, weekStart, weekEnd = Infinity) {
+    const start = Number(weekStart) || 0;
+    const end = Number.isFinite(Number(weekEnd)) ? Number(weekEnd) : Infinity;
+    return list(sessions).filter(session => {
+      const endedAt = new Date(session?.endedAt).getTime();
+      return Boolean(session?.timeConfirmedAt)
+        && Number.isFinite(Number(session?.focusMinutes))
+        && Number.isFinite(endedAt)
+        && endedAt >= start
+        && endedAt < end;
+    });
+  }
+
+  function confirmedFocusMinutes(sessions, weekStart, weekEnd = Infinity) {
+    return confirmedFocusSessions(sessions, weekStart, weekEnd).reduce((total, session) => total + Math.max(0, Number(session.focusMinutes) || 0), 0);
+  }
+
   function normalizeTaskStatus(status, legacyPaused = false) {
     if (VALID_TASK_STATUSES.has(status)) return status;
     return legacyPaused ? TASK_STATUS.PAUSED : TASK_STATUS.ACTIVE;
@@ -92,7 +121,7 @@
 
   function resetProjectAfterLastHistory(project,timestamp=new Date().toISOString()) {
     return {
-      ...project,keepWhenEmpty:true,goal:"",currentState:"尚未开始 / 无工作记录",currentPhase:"",currentProgressSummary:"",completed:[],importedMilestones:[],inProgress:[],nextActions:[],openIssues:[],blockers:[],blockerReviewPending:false,lastWorkedAt:null,updatedAt:timestamp,nonSessionUpdatedAt:timestamp
+      ...project,keepWhenEmpty:true,goal:"",currentState:"尚未开始 / 无工作记录",currentPhase:"",currentProgressSummary:"",completed:[],importedMilestones:[],inProgress:[],nextActions:[],openIssues:[],resolvedIssues:[],blockers:[],blockerReviewPending:false,lastWorkedAt:null,updatedAt:timestamp,nonSessionUpdatedAt:timestamp
     };
   }
 
@@ -130,6 +159,6 @@
 
   window.ProjectOSLifecycle = {
     TASK_STATUS, TASK_STATUS_LABELS, normalizeTaskStatus, taskStatusLabel, isRecommendable, isArchived, taskMenuActions,
-    isOrphanProject, hasImportantMemory, hasMeaningfulState, isDeletingLastFormalHistory, buildProjectOriginSession, resetProjectAfterLastHistory, reconcileContextEvents, reconcileDeletedTaskEvents, formalSessions
+    isOrphanProject, hasImportantMemory, hasMeaningfulState, isDeletingLastFormalHistory, buildProjectOriginSession, resetProjectAfterLastHistory, reconcileContextEvents, reconcileDeletedTaskEvents, formalSessions, sessionsForLocalDay, confirmedFocusSessions, confirmedFocusMinutes
   };
 })();
