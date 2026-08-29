@@ -104,3 +104,18 @@ test("首页灵感库使用独立数据、可收起并提供双入口气泡交�
   assert.match(cssSource,/@keyframes inspiration-breathe/);
   assert.match(cssSource,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test("弹窗不会因点击遮罩或按下 Escape 意外关闭", () => {
+  assert.match(appSource,/dialog\.setAttribute\("closedby","none"\)/);
+  assert.match(appSource,/dialog\.addEventListener\("cancel",event=>event\.preventDefault\(\)\)/);
+  assert.match(appSource,/if\(event\.target===dialog\)\{event\.preventDefault\(\);event\.stopPropagation\(\)\}/);
+  assert.doesNotMatch(appSource,/if\(event\.target===dialog\)closeDialog\(dialog\.id\)/);
+  assert.match(appSource,/event\.key==="Escape"&&topOpenDialog\(\)/);
+});
+
+test("复制提示词时提示显示在当前弹窗的顶层", () => {
+  assert.match(appSource,/function activeToast\(\)\{const dialog=topOpenDialog\(\)/);
+  assert.match(appSource,/toast\.className="toast dialog-toast"/);
+  assert.match(appSource,/dialog\.appendChild\(toast\)/);
+  assert.match(cssSource,/\.modal>\.dialog-toast\{[^}]*text-align:center/);
+});
