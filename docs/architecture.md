@@ -2,7 +2,7 @@
 
 ## 为什么运行文件保留在根目录
 
-Project OS 当前是零依赖的静态 Web 应用。`index.html` 是正式版与通用 Demo 入口；`jpr-demo.html` 是独立 JPR 入口，它读取同一份页面外壳和脚本，因此保持完整本番组件而不复制第二套产品逻辑。公开版保留根目录相对路径加载方式，以避免破坏已经验证的本地启动流程。
+Project OS 当前是零依赖的静态 Web 应用。`index.html` 通过相对路径加载根目录中的 CSS 和 JavaScript 文件。公开版保留这一结构，以避免为了目录外观破坏已经验证的本地启动方式。
 
 ## 运行层
 
@@ -13,7 +13,9 @@ Project OS 当前是零依赖的静态 Web 应用。`index.html` 是正式版与
 - `planning.js`：工作计划、行动建议与基础去重
 - `bootstrap.js`：旧对话导入和现状总结 JSON 解析
 - `ai-workflow.js`：Prompt 生成与 AI 返回结果处理
-- `scripts/serve.mjs`：Windows 本地静态文件服务
+- `auto-sync.js`：Activity Event、Evidence、稳定 SourceBinding、相关性、Router、Review、Daily Brief 与 Project State Projection
+- `scripts/serve.mjs`：Windows 本地静态文件服务与受限的 localhost Auto Sync API
+- `scripts/collectors.mjs`：Git / Filesystem Collector 与 Codex adapter 状态边界
 
 ## 数据层
 
@@ -24,29 +26,61 @@ Project OS 当前是零依赖的静态 Web 应用。`index.html` 是正式版与
 - `hydrateBundle()` / `hydrateState()`：校验并恢复备份
 - `importState()`：导入状态
 
-当前启用 `IndexedDBAdapter`。数据库名为 `project-archive-cockpit`，正式工作区、通用 Demo 与 JPR 专用 Demo 分别使用 `workspace:normal`、`workspace:demo` 和 `workspace:jpr-demo`。
+当前启用 `IndexedDBAdapter`，schema version 3。数据库名为 `project-archive-cockpit`；正式工作区使用 `workspace:normal`，旧 Demo Workspace 只作为兼容数据保留，已退出日常入口。
 
-`localStorage` 用于标准页/JPR 页各自的界面偏好、标准页当前工作区标记、旧版本地数据迁移，以及活动 Session 的同步草稿恢复镜像。主状态仍以 IndexedDB 为准；草稿镜像按 Workspace 和 Session 隔离，用于覆盖用户输入后立即关闭页面、IndexedDB 异步写入尚未完成的短窗口。JPR 页面固定使用 `workspace:jpr-demo`，不会覆盖标准页的工作区选择。
+v3 继续使用 IndexedDB，没有为 Auto Sync 无理由切换 SQLite。数据库升级新增 Event Log、Evidence、Sync Run 与 Rules 对象仓库；聚合 Workspace 仍是备份和恢复边界。
 
-Session 的暂停是状态与导航能力，不是计时器：暂停时保留同一个 Session、Todo、笔记和对话框草稿并返回驾驶舱；继续时恢复原 Session，不创建新历史。
+## Auto Sync 运行边界
 
-Session 内的工作总结和现状总结属于中途状态写回：人工确认后只关闭确认弹窗并重绘当前 Session，不改变 `ui.view`。只有结束 Session 的统一出口 `finishEndedSession()` 才切换到 Project Resume，并默认打开工作历史。
+浏览器不能直接读取 Git 或任意本地目录，因此采集只发生在现有本机 Node 服务中：
 
-“总结工作”与轻量“现状总结”使用不同结构。工作总结把已勾选完成行动、Session 笔记和本 Session 内已人工确认的变化作为本次证据，并要求 AI 返回与项目导入一致的完整项目快照字段；应用以 `project_name` 核对当前项目后，在同一个人工确认页逐字段更新现有项目，不创建重复项目。弹窗中的“本次实际完成了什么”会同步到 Session 笔记并即时重建 Prompt，用于补录外部 Codex、编辑器或浏览器中发生的交付、测试和发现。证据为空时必须保留原项目快照，不得新增完成、资产、记忆或提高阶段。正式版、通用 Demo 与 JPR Demo 共用该规则，JPR 只切换为日文文案和独立工作区。
+```text
+Browser Dashboard
+  └─ POST /api/auto-sync/collect (same-origin localhost)
+      ├─ Git CLI Collector
+      ├─ Filesystem Incremental Collector
+      ├─ Codex Adapter (unavailable 时明确降级)
+      └─ per-collector status
+```
 
-严格 JSON 只解决结构问题，不能证明回答属于当前 Project。轻量状态审查 Prompt 要求 `current_state_summary` 以当前项目名组成的身份前缀开头；完整工作总结则要求 `project_name` 与当前项目名称完全一致。解析后 `ai-workflow.js` 会在显示人工确认页前精确核对，不匹配则停留在粘贴页。核对成功后草稿保存已核对的项目名；切换项目或旧版未核对草稿不能直接确认写回。
+- API 只监听 `127.0.0.1`，拒绝非本机 Origin。
+- 只有用户在项目设置中注册的目录会被扫描。
+- 默认忽略 `.git`、`node_modules`、缓存与编辑器目录；单目录最多 10,000 个文件、深度 14。
+- 测试内容只读取符合测试报告命名规则且不超过 1 MiB 的文本文件。
+- Collector 失败互相隔离；失败来源不推进自己的 checkpoint。
+- 首次数据源 checkpoint 回看 24 小时，之后只读取增量。
 
-结束 Session 时采用人工确认口径：页面以本地时间预填 `startedAt` 与 `endedAt`，允许用户修改，确认后计算整数 `focusMinutes`，并记录 `timeConfirmedAt` 与 `timeEntryMode: "MANUAL_CONFIRMED"`。“本周专注”只合计本地周内结束且有人工确认记录的 Session；不运行后台计时器，也不推导暂停区间。跨周 Session 当前按确认结束时间归属，不做按周切分。
+## Rule First / Evidence First
 
-Project Resume 的显示顺序以恢复行动为中心：项目简介后立即显示 `nextActions[0]`，当前状态、阶段和最新进度使用独立状态面板。`openIssues[]` 与 `resolvedIssues[]` 形成可勾选的问题标签；Blocker 继续保留结构化状态和来源，问题与 Blocker 都允许用户直接物理删除单条记录。
+Project Router 的优先级：
 
-首页“总结今天”是只读的本地派生视图，不新增持久化实体。它按用户本地日期选择当天创建、更新或结束的 Session，按时间顺序生成连续编号，不限制条数，也不读取 `focusMinutes`。相关 Project 的私有记忆放在独立 `<details>` 横向滚动区，只有用户展开时才作为辅助背景查看，不参与任务总结文本。
+1. Collector 项目目录提示；
+2. 用户保存的路径 RoutingRule；
+3. Project 稳定 `sourceBindings[]` 与当前 `sourcePaths[]`；
+4. 项目名称与 `routingKeywords[]`；
+5. 用户确认。
 
-首页“灵感库”读取独立的 Workspace `inspirations[]`，与 `Project.parkingLot[]`、`Session.parkingAdded[]` 和 Backlog 保持语义及存储边界分离。用户只能从首页或 Session 显式加入灵感；Session 来源会保存 Zone / Project / Session 引用与名称快照。每条灵感持久化 `orbPresetId`、`aiState` 和可选 AI 摘要：四个编辑器导出共享同一份 WGSL、一个 WebGPU device 与一条渲染管线，只为屏幕附近的 Canvas 提交帧；收起、离屏、隐藏页面和低动态模式会停止或冻结动画。球面保持纯视觉，原始灵感标题显示在球下方，AI 状态进入卡片可访问标签；WebGPU 不可用或初始化失败时继续显示 CSS 静态球与原始灵感标题。点击 AI 球只展开来源详情或手动换球，不会自动创建任务或修改项目状态。顶部“今日建议”球仍是独立的全局状态视觉。三套 Workspace 各自保存灵感，互不读取。
+高置信度不等于静默写入。所有新 Event 先进入 `suggested`，Review 页面只把可靠归类项预选；用户确认后才变成 `confirmed` 并触发状态投影。
 
-## Demo 隔离
+Git commit 只证明代码活动。只有明确的完成/修复语义与通过的测试 Evidence 相关联时，规则才会提出 `completed` effect；否则进入 `in_progress` 或只写 Timeline。
 
-演示工作区拥有独立的 workspace ID。JPR 专用 Demo 进一步使用第三个命名空间，Session、Prompt、AI 返回和确认后的项目状态只在 `workspace:jpr-demo` 中读写，不会更新正式项目、通用 Demo、正式统计、长期记忆或 Context Link。JPR 页面不读取当前 Workspace 切换标记，UI 偏好也使用独立键；重置时把该命名空间替换为空白起点，再由用户明确载入架空预设。
+Filesystem 不再按“同目录 + 30 分钟”粗暴聚合。相关性优先使用稳定 binding / repository fingerprint、明确 work unit、实际文件重叠和较短 burst。单文件事件保留具体路径；纯文件 Timeline 不覆盖更有语义的 Git、测试或人工工作状态。
+
+## Goal Drift Detection
+
+`CURRENT_GOAL` 是高权限状态，不参与普通 ActivityEvent 的自动投影。检测器只使用近期 confirmed / suggested 的有效工作判断方向偏移：单个 commit、单个测试、纯文件修改和 `manual_patch` 设置变更不会触发；趋势判断至少需要 3 个语义相近事件，并占近期有效方向事件的 60% 以上。明确“当前目标改为 / 下一阶段重点”意图可以形成建议，但仍不能自动写入目标。
+
+检测结果保存为独立 `GoalSuggestion`。只有用户在 Review 中接受或编辑后接受，系统才生成 confirmed `goal_change` Event，由现有 Project State Projection 更新 `goal` 并写入 Timeline。拒绝和稍后处理不会改变目标；接受后的目标修改可以撤销并从 Event Log 重新计算。
+
+## 撤销与重新计算
+
+Project State Projection 从最近的 confirmed baseline 开始，按确认顺序应用 `manual_patch`、`work_log`、自动 effect 与 `goal_change`。撤销或删除对应工作把事件标记为 `rejected` 后重新投影；不会再通过覆盖整份 Project JSON 修补错误。纯导航渲染使用 `save({touch:false})`，不制造虚假的更新时间。
+
+`localStorage` 只用于界面偏好、旧版本地数据迁移和按 workspace/session 隔离的草稿恢复镜像，不是主数据库。
+
+## 旧 Demo 数据兼容
+
+演示工作区仍拥有独立 workspace ID，旧备份可以读取和导出；Demo、Skills 与灵感库已退出日常主路径，JPR 专用页面已删除。兼容数据不会更新正式项目状态、统计、长期记忆或 ZoneLink。
 
 ## 云同步预留
 

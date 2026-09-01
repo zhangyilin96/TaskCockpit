@@ -1,10 +1,12 @@
 (function () {
   const DB_NAME = "project-archive-cockpit";
-  const DB_VERSION = 1;
+  const DB_VERSION = 3;
   const LEGACY_WORKSPACE_ID = "primary-workspace";
-  const WORKSPACE_MODES = { NORMAL: "normal", DEMO: "demo", JPR_DEMO: "jpr-demo" };
-  const SESSION_DRAFT_STORAGE_KEY = "project-os:session-drafts:v1";
-  const STORES = ["workspace", "zones", "projects", "sessions", "memories", "contextLinks", "skills", "settings"];
+  const WORKSPACE_MODES = { NORMAL: "normal", DEMO: "demo" };
+  const STORES = [
+    "workspace", "zones", "projects", "sessions", "memories", "contextLinks", "skills", "settings",
+    "activityEvents", "activityEvidence", "syncRuns", "goalSuggestions", "routingRules", "relationshipRules"
+  ];
   const ENTITY_STORES = STORES.filter(name => name !== "workspace");
 
   function workspaceRecordId(workspaceId) { return `workspace:${workspaceId}`; }
@@ -25,7 +27,7 @@
   class StorageAdapter {
     exportState(normalWorkspace, options = {}) {
       const payload = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         workspaceMode: WORKSPACE_MODES.NORMAL,
         exportedAt: new Date().toISOString(),
         workspace: backupWorkspace(normalWorkspace, false)
@@ -34,10 +36,10 @@
       return payload;
     }
 
-    exportDemoState(demoWorkspace, workspaceMode = demoWorkspace?.workspaceId || WORKSPACE_MODES.DEMO) {
+    exportDemoState(demoWorkspace) {
       return {
-        schemaVersion: 2,
-        workspaceMode,
+        schemaVersion: 3,
+        workspaceMode: WORKSPACE_MODES.DEMO,
         exportedAt: new Date().toISOString(),
         workspace: backupWorkspace(demoWorkspace, true)
       };
@@ -47,7 +49,7 @@
 
     hydrateBundle(payload) {
       const parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
-      if (parsed?.schemaVersion === 2 && parsed.workspace) return { workspace: parsed.workspace, demoWorkspace: parsed.demoWorkspace || null, workspaceMode: parsed.workspaceMode || WORKSPACE_MODES.NORMAL };
+      if ([2,3].includes(parsed?.schemaVersion) && parsed.workspace) return { workspace: parsed.workspace, demoWorkspace: parsed.demoWorkspace || null, workspaceMode: parsed.workspaceMode || WORKSPACE_MODES.NORMAL };
       if (parsed && (Array.isArray(parsed.zones) || Array.isArray(parsed.tasks) || Array.isArray(parsed.accounts))) return { workspace: parsed, demoWorkspace: null, workspaceMode: WORKSPACE_MODES.NORMAL };
       throw new Error("不支持的存档版本");
     }
@@ -56,6 +58,52 @@
     async importState(payload) { return this.hydrateState(payload); }
     async exportBackup(data, options = {}) { return this.exportState(data, options); }
     async importBackup(payload) { return this.importState(payload); }
+  }
+
+  class SessionDraftStore {
+    constructor(storage = typeof localStorage !== "undefined" ? localStorage : null) {
+      this.storage = storage;
+      this.key = "project-os-session-drafts-v1";
+    }
+
+    readAll() {
+      if (!this.storage) return {};
+      try { return JSON.parse(this.storage.getItem(this.key) || "{}"); }
+      catch { return {}; }
+    }
+
+    writeAll(records) {
+      if (!this.storage) return;
+      this.storage.setItem(this.key, JSON.stringify(records));
+    }
+
+    recordKey(workspaceId, sessionId) { return `${workspaceId}:${sessionId}`; }
+
+    save(draft = {}) {
+      if (!draft.workspaceId || !draft.sessionId) return null;
+      const records = this.readAll();
+      const record = clone({ ...draft, updatedAt:draft.updatedAt || new Date().toISOString() });
+      records[this.recordKey(draft.workspaceId, draft.sessionId)] = record;
+      this.writeAll(records);
+      return record;
+    }
+
+    load(workspaceId, sessionId) {
+      const record = this.readAll()[this.recordKey(workspaceId, sessionId)];
+      return record ? clone(record) : null;
+    }
+
+    clear(workspaceId, sessionId) {
+      const records = this.readAll();
+      delete records[this.recordKey(workspaceId, sessionId)];
+      this.writeAll(records);
+    }
+
+    clearWorkspace(workspaceId) {
+      const records = this.readAll();
+      Object.keys(records).filter(key => key.startsWith(`${workspaceId}:`)).forEach(key => delete records[key]);
+      this.writeAll(records);
+    }
   }
 
   class IndexedDBAdapter extends StorageAdapter {
@@ -103,7 +151,13 @@
         ]),
         contextLinks: [...(data.zoneLinks || []), ...(data.contextEvents || [])].map(item => this.scopedRecord(workspaceId, item)),
         skills: (data.skills || []).map(skill => this.scopedRecord(workspaceId, skill)),
-        settings: [this.scopedRecord(workspaceId, { id: "workspace-settings", ...(data.settings || {}) }, "workspace-settings")]
+        settings: [this.scopedRecord(workspaceId, { id: "workspace-settings", ...(data.settings || {}) }, "workspace-settings")],
+        activityEvents: (data.activityEvents || []).map(item => this.scopedRecord(workspaceId, item)),
+        activityEvidence: (data.activityEvidence || []).map(item => this.scopedRecord(workspaceId, item)),
+        syncRuns: (data.syncRuns || []).map(item => this.scopedRecord(workspaceId, item)),
+        goalSuggestions: (data.goalSuggestions || []).map(item => this.scopedRecord(workspaceId, item)),
+        routingRules: (data.routingRules || []).map(item => this.scopedRecord(workspaceId, item)),
+        relationshipRules: (data.projectRelationshipRules || []).map(item => this.scopedRecord(workspaceId, item))
       };
     }
 
@@ -156,39 +210,6 @@
     async saveWorkspace(data, workspaceId = WORKSPACE_MODES.NORMAL) { this.workspaces.set(workspaceId, clone(data)); }
   }
 
-  class SessionDraftStore {
-    constructor(storage) { this.storage = storage; }
-    recordKey(workspaceId, sessionId) { return `${workspaceId}:${sessionId}`; }
-    readAll() {
-      try { return JSON.parse(this.storage?.getItem(SESSION_DRAFT_STORAGE_KEY) || "{}") || {}; }
-      catch { return {}; }
-    }
-    writeAll(records) {
-      try { this.storage?.setItem(SESSION_DRAFT_STORAGE_KEY, JSON.stringify(records)); return true; }
-      catch { return false; }
-    }
-    save(record = {}) {
-      if (!record.workspaceId || !record.sessionId) return false;
-      const records = this.readAll();
-      records[this.recordKey(record.workspaceId, record.sessionId)] = clone(record);
-      return this.writeAll(records);
-    }
-    load(workspaceId, sessionId) {
-      const record = this.readAll()[this.recordKey(workspaceId, sessionId)];
-      return record ? clone(record) : null;
-    }
-    remove(workspaceId, sessionId) {
-      const records = this.readAll();
-      delete records[this.recordKey(workspaceId, sessionId)];
-      return this.writeAll(records);
-    }
-    clearWorkspace(workspaceId) {
-      const records = this.readAll();
-      Object.keys(records).filter(key => key.startsWith(`${workspaceId}:`)).forEach(key => delete records[key]);
-      return this.writeAll(records);
-    }
-  }
-
   class CloudAdapterStub extends StorageAdapter {
     constructor() { super(); this.enabled = false; }
     async loadWorkspace() { return null; }
@@ -207,7 +228,6 @@
   }
 
   function createStorageAdapter() { return "indexedDB" in window ? new IndexedDBAdapter() : new MemoryStorageAdapter(); }
-  function createSessionDraftStore(storage = window.localStorage) { return new SessionDraftStore(storage); }
 
-  window.ProjectOSStorage = { StorageAdapter, IndexedDBAdapter, MemoryStorageAdapter, SessionDraftStore, CloudAdapterStub, SyncProviderStub, SkillDiscoveryProviderStub, createStorageAdapter, createSessionDraftStore, backupWorkspace, DB_NAME, DB_VERSION, STORES, WORKSPACE_MODES, SESSION_DRAFT_STORAGE_KEY };
+  window.ProjectOSStorage = { StorageAdapter, SessionDraftStore, IndexedDBAdapter, MemoryStorageAdapter, CloudAdapterStub, SyncProviderStub, SkillDiscoveryProviderStub, createStorageAdapter, backupWorkspace, DB_NAME, DB_VERSION, STORES, WORKSPACE_MODES };
 })();

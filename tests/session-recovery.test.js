@@ -22,11 +22,11 @@ function memoryLocalStorage() {
 test("Session 草稿恢复镜像按工作区和 Session 隔离", () => {
   const store = new window.ProjectOSStorage.SessionDraftStore(memoryLocalStorage());
   store.save({ workspaceId:"normal", projectId:"p1", sessionId:"s1", notes:"正式笔记", drafts:{workSummary:{raw:"{}"}}, updatedAt:"2026-08-26T10:00:00.000Z" });
-  store.save({ workspaceId:"jpr-demo", projectId:"p1", sessionId:"s1", notes:"デモメモ", drafts:{}, updatedAt:"2026-08-26T10:01:00.000Z" });
+  store.save({ workspaceId:"workspace-a", projectId:"p1", sessionId:"s1", notes:"恢复测试笔记", drafts:{}, updatedAt:"2026-08-26T10:01:00.000Z" });
   assert.equal(store.load("normal","s1").notes,"正式笔记");
-  assert.equal(store.load("jpr-demo","s1").notes,"デモメモ");
-  store.clearWorkspace("jpr-demo");
-  assert.equal(store.load("jpr-demo","s1"),null);
+  assert.equal(store.load("workspace-a","s1").notes,"恢复测试笔记");
+  store.clearWorkspace("workspace-a");
+  assert.equal(store.load("workspace-a","s1"),null);
   assert.equal(store.load("normal","s1").drafts.workSummary.raw,"{}");
 });
 
@@ -57,7 +57,7 @@ test("确认总结写回后留在 Session，只有结束工作才返回项目", 
   const updateSource=appSource.slice(updateStart,updateEnd);
   assert.match(updateSource,/closeDialog\("status-review-dialog"\);render\(\)/);
   assert.doesNotMatch(updateSource,/ui\.view=/);
-  assert.match(appSource,/applyStatusReviewDraft\([^)]+\);finishStatusReviewUpdate\(/);
+  assert.match(appSource,/applyStatusReviewDraft\([^)]+\);AUTO_SYNC\.recordProjectChange\([\s\S]{0,800}finishStatusReviewUpdate\(/);
   assert.match(appSource,/function finishEndedSession\(message\)\{closeDialog\("end-dialog"\);ui\.view="project";ui\.detailTab="history"/);
 });
 
@@ -83,6 +83,6 @@ test("结束工作必须确认可编辑时间并写入专注分钟数", () => {
   assert.match(appSource,/session\.startedAt=timeValues\.startedAt/);
   assert.match(appSource,/session\.endedAt=timeValues\.endedAt/);
   assert.match(appSource,/session\.focusMinutes=timeValues\.focusMinutes/);
-  assert.match(appSource,/session\.timeConfirmedAt=timestamp/);
+  assert.match(appSource,/session\.timeConfirmedAt=now\(\)/);
   assert.match(appSource,/timeConfirmed:byId\("end-time-confirmed"\)\.checked/);
 });

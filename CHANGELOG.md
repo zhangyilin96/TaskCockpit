@@ -2,45 +2,65 @@
 
 本文件记录公开版本的主要变化。
 
-## Unreleased
+## v0.3.0 - 2026-08-31
+
+日常驾驶舱收口与状态投影重构。
 
 ### Added
 
-- 灵感库加入四种编辑器导出的液态 AI 球；每条灵感稳定保存球预设、AI 状态和可选反馈摘要，并可在详情中手动换球
-- 增加共享 WebGPU 灵感球渲染器与 `ProjectOSInspirationAI.setState()` 接口，支持可读状态、静态回退、低动态、离屏及隐藏页面暂停
-- 首页“今日建议”卡片加入独立 WebGPU 液态玻璃状态球，并提供静态回退、低动态模式与隐藏页面暂停渲染
-- 增加独立 `jpr-demo.html` 页面与全虚构日文业务改善案例
-- 增加独立的 `workspace:jpr-demo` 本地存储命名空间
-- 增加三分钟核心路径日文展示、日文 AI Prompt 和安全的演示 JSON 回答
-- 增加 `docs/JPR_DEMO_SCRIPT.md` 与五张 JPR Demo 安全截图
-- Session 增加“总结工作”入口：生成包含当前 Session 的 Prompt，读取严格 JSON，并在人工确认后更新项目状态
-- Session 增加“暂停本次工作”：返回首页但保留当前工作、笔记、Todo 和草稿，可从 Project Resume 继续
-- 增加活动 Session 草稿恢复镜像，关闭弹窗或刷新后可恢复 AI 回复、求助、结束总结与暂存输入
-- Project Resume 增加紧邻项目简介的行动指示卡，以及独立的项目状态与进度面板
-- 当前问题增加标签式勾选解决、重新打开和单条直接删除
-- 结束 Session 增加开始/结束时间编辑、人工确认与专注分钟数记录
-- 首页增加“总结今天”：按本地日期将当天 Session 以连续数字列出，不限制条数，不显示分钟数，并可按需横向查看相关项目记忆
-- 首页增加独立 Workspace“灵感库”：与项目暂存/待办分离，可收起；可从首页或 Session 添加，点击 AI 球可查看来源并返回关联项目
+- 首页“昨天做了什么 / 今天该做什么 / 项目卡在哪里”日常主线
+- `manual_patch`、`work_log` 事件与确定性 Project 重放
+- 稳定 `sourceBindings[]`、Git repository fingerprint、路径别名恢复与健康状态
+- Session 草稿恢复、暂停/继续、可编辑并人工确认的专注时间
+- ZoneLink 原因、共享白名单、`REFERENCE_ONLY` 和旧关系待确认状态
+- 文件摘要迁移、Goal Drift 设置误报过滤、历史来源分层
 
 ### Changed
 
-- “总结工作”从增量状态建议升级为完整当前项目更新：沿用项目导入字段结构，但写回现有项目而不创建重复项目；新增“本次实际完成了什么”输入，并以 `project_name` 阻止其他项目或旧对话内容混入
-- 完整项目确认页新增项目目的、当前目标、关键决策、约束、资产、长期上下文和项目暂存字段；所有字段仍可编辑和单独勾选，“已完成”继续默认不勾选
-- 修正以数字开头的行动文本被误删数字的问题，例如 `10件样本` 现在会完整进入 Prompt
-- 正式版、通用 Demo 与 JPR Demo 的“总结工作”Prompt 统一以完成勾选、工作笔记和本次人工确认变化为更新证据；历史状态作为完整快照基线，无证据时禁止虚构完成、资产、记忆或阶段提升
-- Session 工作笔记增加证据提示，提醒把应用外完成的修改内容、测试和浏览器验收结果先记录后再总结
-- 灵感 AI 球改为通过同源着色器桥接加载编辑器导出效果，不再依赖 `fetch()`；修复部分本地打开方式只显示备用渐变球的问题。球体保持纯视觉，原始灵感标题显示在球下方，AI 状态保留在可访问标签与详情数据中
-- 现状总结与工作总结增加项目身份锁：Prompt 要求状态摘要携带当前项目名，应用在预览前强制核对并拒绝其他项目或旧对话的合法 JSON；校验前缀不会写入项目状态正文
-- 项目与 Session 的既有暂存事项继续作为项目私有资产收起，不再自动汇总或迁移到首页灵感库
-- 工作总结或现状总结经人工确认写回后继续停留在当前 Session；只有结束工作才退出到 Project Resume
-- JPR Demo 首页隐藏“本周专注”，正式统计口径与算法保持不变
-- JPR Demo 改为复用完整本番组件，恢复生命周期标签、任务菜单、追加项目、完整 Resume 与 Session 侧栏
-- JPR 重置改为返回从零开始页面，不再立即重新载入预设
-- 正式版与通用 Demo 继续位于 `index.html`，不再与 JPR Demo 共用同一个入口
-- JPR 的追加主任务/项目弹窗改为日文，正式版与通用 Demo 的中文文案保持不变
-- 原“导入 AI 返回结果”按钮替换为“总结工作”，继续复用逐字段编辑、勾选与确认写回机制
-- 自动化测试增加 JPR 独立网址、重置回零、完整组件、隔离、恢复、导出边界和日文路径检查
-- “本周专注”改为只合计本地周内人工确认的 `focusMinutes`，不再使用未经确认的墙钟差值
+- 文件活动按稳定来源和明确工作单元相关联，不再使用同目录 30 分钟粗聚合
+- 多目录输入只做精确去重；Filesystem index 使用 source binding ID
+- 人工修改、AI 确认和 Session 结束不再通过整份 Project snapshot 覆盖状态
+- 工作历史自动区最多显示最近 8 条，完整证据进入时间线
+- 公开审计扫描 Git 将纳入发布的文件，不误判 `.gitignore` 中的用户备份
+
+### Removed from primary flow
+
+- JPR 专用页面、脚本、测试和截图
+- 首页 Demo、Skills 与灵感库入口
+- 迁移时隐式建立的默认跨主任务关系
+
+### Verified
+
+- 自动化语法、单元与集成测试全绿
+- 临时真实 Git 仓库移动前后来源身份稳定
+- 真实浏览器完成建项目、多目录同步、Review、暂停恢复、人工结束、删除重放和关系边界流程
+
+## v0.2.0 - 2026-08-29
+
+Auto Sync 架构升级。
+
+### Added
+
+- 启动后按 checkpoint 增量执行 Git、Filesystem 与 Project OS Activity 采集
+- `ActivityEvent`、`ActivityEvidence`、`SyncRun`、`RoutingRule`、`ProjectRelationshipRule`
+- Git commit、branch、changed files 与测试报告 Evidence
+- 同目录时间窗聚合、跨 Git / 文件 / 测试证据关联和重复检测
+- Rule-first Project Router 与轻量 Review Before Merge
+- Confirmed Event Log 驱动的 Project State Projection、证据时间线和撤销重算
+- 新目录首次 24 小时补齐、Collector 独立 checkpoint 与失败隔离
+- 可重复的临时真实 Git 仓库端到端验证脚本
+
+### Changed
+
+- Dashboard 先打开，Auto Sync 后台运行，不因 Collector 或 AI 阻塞启动
+- 手动 AI 对话导入降级为“手动补充记录” fallback
+- IndexedDB 新增 Auto Sync 专用 stores，JSON 备份 schema 升级为 v3
+
+### Known limitations
+
+- Codex Activity 当前只有 adapter 边界；没有可靠接口时明确显示 unavailable
+- RelationshipRule 数据结构已预留，语义派生事件尚未进入本版 UI
+- 文件删除只有在至少完成一次文件索引后才能可靠检测
 
 ## v0.1.0 - 2026-08-25
 

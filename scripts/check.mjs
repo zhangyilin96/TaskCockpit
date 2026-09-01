@@ -7,7 +7,10 @@ const syntaxChecks = [
   ["--check", "lifecycle.js"],
   ["--check", "planning.js"],
   ["--check", "bootstrap.js"],
-  ["--check", "ai-workflow.js"]
+  ["--check", "ai-workflow.js"],
+  ["--check", "auto-sync.js"],
+  ["--check", "scripts/collectors.mjs"],
+  ["--check", "scripts/serve.mjs"]
 ];
 
 const testFiles = readdirSync("tests")

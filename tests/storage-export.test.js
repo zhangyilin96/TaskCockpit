@@ -21,8 +21,8 @@ function fixture() {
         ]
       }]
     }],
-    inspirations: [{ id: "idea-1", text: "独立灵感", source: "dashboard" }],
     skills: [{ id: "skill-1" }],
+    goalSuggestions: [{ id: "goal-suggestion-1", projectId: "project-1", status: "pending" }],
     zoneLinks: [{ id: "link-1" }]
   };
 }
@@ -30,12 +30,20 @@ function fixture() {
 test("正式备份默认排除演示和已删除 Session", async () => {
   const adapter = new window.ProjectOSStorage.MemoryStorageAdapter();
   const backup = await adapter.exportBackup(fixture());
-  assert.equal(backup.schemaVersion, 2);
+  assert.equal(backup.schemaVersion, 3);
   assert.ok(backup.exportedAt);
   assert.deepEqual(backup.workspace.zones[0].projects[0].sessions.map(item => item.id), ["formal-1"]);
   assert.equal(backup.workspace.skills.length, 1);
+  assert.equal(backup.workspace.goalSuggestions[0].status, "pending");
   assert.equal(backup.workspace.zoneLinks.length, 1);
-  assert.equal(backup.workspace.inspirations[0].text, "独立灵感");
+});
+
+test("GoalSuggestion 使用独立本地对象仓库并随工作区保存", () => {
+  const adapter = new window.ProjectOSStorage.IndexedDBAdapter();
+  const records = adapter.recordsFor(fixture(), "normal");
+  assert.equal(window.ProjectOSStorage.STORES.includes("goalSuggestions"), true);
+  assert.equal(records.goalSuggestions.length, 1);
+  assert.equal(records.goalSuggestions[0].entityId, "goal-suggestion-1");
 });
 
 test("勾选后附加独立演示工作区，正式工作区仍排除旧版演示记录", async () => {

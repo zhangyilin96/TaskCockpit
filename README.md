@@ -2,7 +2,7 @@
 
 **项目太多，脑子记不住做到哪？**
 
-这是一个 Local First 的个人项目存档驾驶舱。它把主任务、次级项目、工作记录和项目记忆隔离保存，让你下次回来时能直接恢复“上次做到哪”。
+这是一个 Local First 的个人项目存档驾驶舱。它把主任务、次级项目、真实工作证据和项目记忆隔离保存，让你下次回来时能直接恢复“上次做到哪”。
 
 > **当前版本仅支持 Windows 10 / Windows 11。**
 >
@@ -10,19 +10,23 @@
 
 它现在可以帮助你：
 
-- 保存主任务 / 次级项目状态
-- 记录每次工作 Session
+- 每天先看清“昨天做了什么、今天该做什么、项目卡在哪里”
+- 保存主任务 / 次级项目状态与明确的只读关联边界
+- 启动后按 `lastSyncAt` 自动检查 Git 与已注册项目目录
+- 通过稳定来源标识追踪移动或重命名后的 Git 仓库与历史路径
+- 将 commit、明确工作单元、文件和测试报告整理为带 Evidence 的 Activity Event
+- 在轻量 Review 中确认归属，再投影更新项目状态
+- 记录、暂停、恢复和纠正每次工作 Session
 - 保存长期项目记忆并恢复上次进度
-- 在首页按连续编号整理当天任务进展，并按需横向查看相关项目记忆
-- 在首页可收起的“灵感库”保存尚未成为任务的想法，并为每条灵感绑定一个可互动的 AI 球
 - 生成可交给 ChatGPT / Codex / DeepSeek 的上下文 Prompt
 - 解析 AI 返回的 JSON，由用户确认后更新项目状态
-- 使用独立 Demo Workspace 与 JPR 专用演示预设安全演示
 - 导入、导出本地 JSON 备份
 
 核心原则：
 
-> **AI 负责总结，人负责定案。**
+> **Do the work, not the reporting.**
+>
+> 用户负责工作，Project OS 根据真实 Evidence 观察工作；规则优先，低置信度才打扰用户。
 
 出品：**kiseki 的 AI Lab**
 
@@ -48,7 +52,7 @@
 1. 在 Windows 10 / 11 安装 [Node.js 20 LTS 或更高版本](https://nodejs.org/)。
 2. Clone 本仓库，或从 GitHub 下载 ZIP 并完整解压。
 3. 双击根目录中的 `启动项目存档驾驶舱.cmd`。
-4. 等待浏览器自动打开 `http://127.0.0.1:4173`。
+4. 等待浏览器打开 `http://127.0.0.1:4173`。Dashboard 会立即可用，Auto Sync 在后台检查上次 checkpoint 以来的增量。
 
 项目没有第三方运行依赖，因此无需安装额外 npm 包。也可以在项目根目录运行：
 
@@ -58,27 +62,41 @@ npm start
 
 然后手动打开 `http://127.0.0.1:4173`。关闭本地服务窗口即可停止运行。
 
-## 快速体验
+## 第一次使用
 
-Demo Workspace 与正式 Workspace 完全隔离，不会读取或修改正式项目。
+1. 建立一个长期方向（主任务），例如“产品开发”。
+2. 在主任务下建立当前要推进的次级项目。
+3. 在项目的“工作目录”中每行填写一个本地目录。路径只做精确去重，不会把父子目录误认为同一条。
+4. 点击 **同步最近工作**，在 Review 中确认、改归属或忽略活动。文件变化本身不会被判定为任务完成。
+5. 在项目中写清当前目标、下一步和明确阻塞，然后开始一次 Session。
+6. 结束 Session 时核对开始/结束时间；只有人工确认的时间才计入本周专注。
+7. 第二天打开首页，直接查看昨天事实、今天行动和当前卡点。
 
-1. 启动后点击右上角 **演示模式**。
-2. 确认进入后点击 **载入示例数据**。
-3. 依次体验：主任务 → 次级项目 → 恢复项目状态 → 开始本次工作。
-4. 在 Session 页面试用 **我卡住了**、**现状总结**、**总结工作** 和 **暂停本次工作**。
-5. 可将 [`demo/sample-status-review.json`](demo/sample-status-review.json) 粘贴到“总结工作”的 AI 返回区，验证 JSON 解析、逐字段编辑与人工确认流程。
-6. 点击 **重置演示数据**，即可清空 Demo Workspace，正式数据不受影响。
+## Auto Sync 核心工作流
 
-JPR 演示不再混入上述通用 Demo 入口，而是使用独立页面 [`jpr-demo.html`](jpr-demo.html)。打开后点击 **JPRデモを開始**，即可载入全虚构日文案例。该页面复用正式版的完整驾驶舱、任务标签、追加项目、Resume、Session 与人工确认组件；三分钟路线见 [`docs/JPR_DEMO_SCRIPT.md`](docs/JPR_DEMO_SCRIPT.md)。
+首次为次级项目配置本地项目目录：项目右上角 `···` → **编辑任务** → **Auto Sync 数据源**。首次配置默认只回看最近 24 小时；之后 Git 与 Filesystem 各自维护 checkpoint。
 
-两个本地入口：
+```text
+正常使用 Codex / Git / 本地项目目录 / 测试工具
+↓
+启动 Project OS，Dashboard 立即可用
+↓
+Sync Run 按 checkpoint 增量采集
+↓
+ActivityEvent + 多条 Evidence
+↓
+稳定来源身份 + 明确工作单元 + Project Router
+↓
+Review Before Merge（高置信度预选，低置信度确认）
+↓
+Confirmed Event Log
+↓
+Project State Projection
+```
 
-- `index.html`：正式 Workspace 与原有通用 Demo，保持上一版页面结构。
-- `jpr-demo.html`：只进入 JPR 专用 Demo；重置后返回 JPR 的从零开始页面。
+文件修改只会成为可读 Evidence，不会直接被解释为“任务完成”。明确完成或修复说明与通过的测试证据相关联后，才可能建议写入 Completed。人工修正、AI 确认和 Session 结束也写入同一 Event Log，因此撤销自动事件或删除工作记录时可以确定性重放，而不是恢复一份旧快照。
 
-[`demo/`](demo/) 目录还提供了安全、虚构的 Bootstrap JSON 和 Demo 备份样例。
-
-## 核心工作流
+## 手动补充工作流（fallback）
 
 ```text
 选择主任务
@@ -89,9 +107,9 @@ JPR 演示不再混入上述通用 Demo 入口，而是使用独立页面 [`jpr-
 ↓
 开始本次工作
 ↓
-我卡住了 / 现状总结 / 总结工作
+我卡住了 / 现状总结
 ↓
-生成 Prompt
+Auto Sync 没捕获到历史记录时，生成 Prompt
 ↓
 交给 AI
 ↓
@@ -99,9 +117,7 @@ JPR 演示不再混入上述通用 Demo 入口，而是使用独立页面 [`jpr-
 ↓
 人工确认更新
 ↓
-返回当前 Session 继续工作
-↓
-暂停后继续，或结束 Session 后返回 Project Resume
+结束 Session
 ↓
 下次继续
 ```
@@ -109,59 +125,36 @@ JPR 演示不再混入上述通用 Demo 入口，而是使用独立页面 [`jpr-
 ## 已实现
 
 - 主任务 / 次级项目两级结构与生命周期管理
-- 首页驾驶舱、规则建议、最近动态及可点击统计明细
-- 首页“总结今天”按本地日期列出当天创建、更新或结束的全部 Session，不限制条数且不包含分钟统计
-- 首页“灵感库”使用独立 Workspace 数据：可收起、从首页添加；新灵感会均衡绑定四种液态 AI 球，球体保持纯净、原始灵感标题显示在球下方，点击可查看来源、手动换球并返回关联项目
-- 首页“今日建议”卡片使用独立 WebGPU 液态玻璃状态球作为渐进增强视觉，并保留非 WebGPU 静态回退和低动态模式
+- 首页“昨天 / 今天 / 卡点”驾驶舱、规则建议、最近动态及可点击统计明细
 - Project Resume：目标、状态、阶段、成果、问题、阻塞与下一步
 - 核心状态人工编辑；AI 建议可逐字段勾选、修改后再写入
-- Session 计划、最多三项“今日只做”、笔记、项目私有暂存、独立灵感捕捉、暂停续接与结束归档
-- 结束 Session 时人工确认可编辑的开始/结束时间，并以确认分钟数计入“本周专注”
-- Project Resume 将行动指示前置，项目状态独立展示；问题支持标签式解决、恢复与直接删除
+- Session 计划、最多三项“今日只做”、草稿恢复、暂停、人工时间确认与结束归档
 - 工作历史单条删除、批量管理及最后一条历史的项目保留选择
 - 长期项目记忆、关键决策、约束、资产、待办池与暂存区
-- “我卡住了”Prompt、现状总结 Prompt、工作总结 Prompt、Bootstrap Prompt
-- “总结工作”根据本次 Session 的完成勾选、工作笔记和已确认变化，生成更新后的完整项目结构；可在弹窗直接补录外部 Codex、编辑器或浏览器中的真实成果
-- 完整项目 JSON 解析、`project_name` 身份校验、逐字段预览与人工确认写回；更新现有项目而不创建重复项目，其他项目或旧对话的 JSON 会在预览前被拒绝
-- 独立 Demo Workspace、演示标记、演示数据清理与正式数据隔离
-- Skills 技能库与主任务 Context Link
+- “我卡住了”Prompt、现状总结 Prompt、Bootstrap Prompt
+- AI JSON 解析、预览、人工确认与项目回写
+- 旧 Demo Workspace 数据兼容读取；Demo、Skills 与灵感库已退出日常主路径
+- 主任务只读关联：必须填写原因、选择共享白名单，不跨项目写回状态
 - IndexedDB 自动保存、JSON 导入与导出
 - `LocalStorageAdapter`/`IndexedDBAdapter` 与禁用的云端适配器占位
-
-## 灵感 AI 球状态接口
-
-四种灵感球通过同源桥接读取编辑器导出的着色器，共享一个 WebGPU device 与渲染管线，只渲染当前展开且位于屏幕附近的球；顶部“今日建议”AI 球保持独立。现有灵感首次读取时会获得稳定的 `orbPresetId`，新灵感优先分配当前使用次数最少的球，用户也可以在灵感详情中手动更换。
-
-未来接入 AI 后，可以使用页面提供的接口更新单条灵感的可读状态与摘要：
-
-```js
-window.ProjectOSInspirationAI.setState(inspirationId, "thinking");
-window.ProjectOSInspirationAI.setState(inspirationId, "ready", {
-  summary: "AI 已找到三条可关联的项目线索。"
-});
-```
-
-支持 `idle`、`thinking`、`ready`、`attention`、`error`。为保持球面纯净，状态文字写入球卡片的可访问标签，AI 摘要在选中详情中显示；颜色、光效和速度只作为辅助反馈。不支持 WebGPU 或启用低动态模式时，仍保留静态球、原始灵感标题与可访问状态。
-
-## 主任务之间如何关联
-
-当前版本关联的是“主任务 ↔ 主任务”，不是“次级项目 ↔ 次级项目”。进入任一主任务，在页面底部找到 **关联主任务**，点击 **管理关联**，选择另一个主任务和允许共享的范围后保存即可。
-
-可选范围包括项目里程碑与总体进度、发布内容、内容表现数据和主任务共享记忆。项目私有记忆、完整 Session、源代码和内部提示词始终不会因为关联而自动共享。若需要两个次级项目直接联动，当前没有可开启的设置，需要以后新增独立的 ProjectLink 能力。
+- Auto Sync 后台启动、全局与分 Collector checkpoint
+- Git Collector、Filesystem Collector、测试报告识别和失败隔离
+- ActivityEvent、Evidence、SyncRun、RoutingRule、稳定 SourceBinding 与只读 ZoneLink 数据边界
+- 跨来源活动关联、重复检测、Review Before Merge 与证据链
+- Confirmed Event Log 驱动 Project State Projection，包括 `manual_patch` 与 `work_log`
+- 事件撤销与从 baseline 重新计算
+- Codex Activity Adapter 的正式占位（当前环境无可靠接口时显示 unavailable）
 
 ## 数据保存在哪里
 
 正式数据和 Demo 数据默认保存在当前浏览器配置文件的 **IndexedDB** 中：
 
-- 数据库：`project-archive-cockpit`
+- 数据库：`project-archive-cockpit`（IndexedDB schema v3）
 - 正式工作区：`workspace:normal`
 - 演示工作区：`workspace:demo`
-- JPR 专用演示工作区：`workspace:jpr-demo`
-- `localStorage` 保存标准页/JPR 页各自的界面偏好、标准页当前工作区标记、旧版迁移入口，以及活动 Session 的同步草稿恢复镜像；JPR 页面固定使用 `workspace:jpr-demo`
+- `localStorage` 保存界面偏好、旧版迁移入口和按 workspace/session 隔离的 Session 草稿恢复镜像
 
-创建或编辑主任务、项目、Session、记忆、Skills、Context Link，以及确认 AI 导入结果时，应用都会自动保存。Session 笔记、AI 回复、求助内容、结束总结和暂存输入会同步写入本地草稿镜像；关闭弹窗或刷新后重新打开仍可恢复。数据不会自动上传到网络，也不会因为 Git 提交而进入仓库。
-
-“本周专注”不再使用 `endedAt - startedAt` 的未确认墙钟差值。用户结束 Session 时确认开始和结束时间，系统记录计算后的整数分钟；只有人工确认过、且确认结束时间落在本地本周内的 Session 才进入统计。暂停按钮继续只负责保存并离开当前工作，不增加后台计时器或暂停区间。
+创建或编辑主任务、项目、Session、记忆、Skills、Context Link，确认 AI 导入结果，以及执行 Auto Sync Review 时，应用都会自动保存。Git 和目录采集只通过 `127.0.0.1` 本机服务执行，数据不会自动上传到网络，也不会因为 Git 提交而进入仓库。
 
 右上角两个备份按钮分别是：
 
@@ -178,21 +171,14 @@ window.ProjectOSInspirationAI.setState(inspirationId, "ready", {
 - [本次工作 Session](docs/screenshots/session.jpg)
 - [“我卡住了”](docs/screenshots/stuck.jpg)
 - [现状总结](docs/screenshots/status-review.jpg)
-- [技能库](docs/screenshots/skills.jpg)
-- [独立 Demo 模式](docs/screenshots/demo-mode.jpg)
-- [JPR Demo 首页](docs/screenshots/jpr-demo-dashboard.jpg)
-- [JPR Demo 主任务与追加项目](docs/screenshots/jpr-demo-zone.jpg)
-- [JPR Demo Project Resume](docs/screenshots/jpr-demo-resume.jpg)
-- [JPR Demo Session](docs/screenshots/jpr-demo-session.jpg)
-- [JPR Demo AI 人工确认](docs/screenshots/jpr-demo-ai-review.jpg)
-
-全部公开截图均使用虚构 Demo 数据。
+旧截图仅用于历史版本说明；当前日常入口以实际运行界面为准。
 
 ## 开发与验证
 
 ```powershell
 npm install
 npm run check
+npm run test:e2e
 npm run check:public
 ```
 
@@ -212,6 +198,7 @@ TaskCockpit/
 ├─ index.html
 ├─ app.js
 ├─ storage.js
+├─ auto-sync.js
 ├─ lifecycle.js
 ├─ planning.js
 ├─ bootstrap.js
@@ -230,11 +217,14 @@ TaskCockpit/
 
 ## Roadmap（未实现）
 
-以下内容均未实现，也不属于 v0.1.0 的支持范围：
+以下内容均未实现，也不属于 v0.3.0 的支持范围：
 
 - macOS / Linux 支持
 - 云同步与多设备
-- Agent API 直连
+- 可靠的 Codex session / execution log adapter
+- 可视化 RoutingRule / ProjectRelationshipRule 管理页
+- 关联项目的语义派生事件（不会简单复制主事件）
+- 后台定时采集与系统开机同步
 - Skills 自动发现
 - 更完整的 Context Link
 - 更智能的状态总结

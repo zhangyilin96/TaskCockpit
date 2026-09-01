@@ -36,6 +36,13 @@
     return `复现并验证“${String(issue||"当前阻塞").trim()}”，记录触发条件、实际结果和是否解除阻塞。`;
   }
 
+  function blockerIssueFromAction(value) {
+    const match=String(value||"").trim().match(/^复现并验证“([\s\S]+)”[，,]记录触发条件、实际结果和是否解除阻塞。?$/);
+    return match?match[1].trim():"";
+  }
+
+  function isBlockerAction(value) { return Boolean(blockerIssueFromAction(value)); }
+
   function ensureAction(value,{goal="",projectName=""}={}) {
     const source=String(value||"").trim();
     if(source&&startsWithActionVerb(source)&&!isHighlySimilar(source,goal))return source;
@@ -81,9 +88,9 @@
     const goal=String(project.goal||"推进当前项目并得到一个可验证结果").trim();
     const openBlockers=(project.blockers||[]).filter(item=>item.status==="OPEN");
     const priorityBlocker=openBlockers.find(item=>item.priority==="HIGH");
-    const raw=[...(project.nextActions||[]),...(project.inProgress||[])];
-    const primary=priorityBlocker?blockerAction(priorityBlocker):ensureAction(raw[0],{goal,projectName:project.name});
-    const optional=uniqueActions(goal,raw.slice(priorityBlocker?0:1))
+    const raw=[...(project.nextActions||[]),...(project.inProgress||[])].filter(value=>!isBlockerAction(value));
+    const primary=ensureAction(raw[0],{goal,projectName:project.name});
+    const optional=uniqueActions(goal,[...(priorityBlocker?[blockerAction(priorityBlocker)]:[]),...raw.slice(1)])
       .map(value=>ensureAction(value,{goal,projectName:project.name}))
       .filter(value=>!isHighlySimilar(value,primary));
     return {goal,primary,optional:uniqueActions(goal,optional).slice(0,2)};
@@ -99,5 +106,5 @@
     return {primary:finalPrimary,optional:finalOptional,primaryChanged:finalPrimary!==originalPrimary,removedCount:optional.filter(value=>String(value||"").trim()).length-finalOptional.length};
   }
 
-  window.ProjectOSPlanning={ACTION_VERBS,similarity,isHighlySimilar,startsWithActionVerb,contextualAction,blockerAction,ensureAction,uniqueActions,dedupeItems,dedupeTodos,buildSessionPlan,cleanTodoValues};
+  window.ProjectOSPlanning={ACTION_VERBS,similarity,isHighlySimilar,startsWithActionVerb,contextualAction,blockerAction,blockerIssueFromAction,isBlockerAction,ensureAction,uniqueActions,dedupeItems,dedupeTodos,buildSessionPlan,cleanTodoValues};
 })();

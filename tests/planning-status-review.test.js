@@ -39,10 +39,19 @@ test("Todo 去除完全重复、高相似和“解决：X / X”", () => {
   assert.equal(planning.isHighlySimilar(result.primary,result.optional[0]),false);
 });
 
-test("高优先级 OPEN blocker 优先成为主行动", () => {
+test("高优先级 OPEN blocker 只能成为可选行动，不能覆盖主行动", () => {
   const plan=planning.buildSessionPlan({name:"角色实验",goal:"建立稳定实验流程",nextActions:["整理旧案例"],blockers:[{text:"右 45° 生成会镜像",status:"OPEN",priority:"HIGH"},{text:"旧问题",status:"RESOLVED",priority:"HIGH"}]});
-  assert.match(plan.primary,/右 45° 生成会镜像/);
-  assert.doesNotMatch(plan.primary,/旧问题/);
+  assert.match(plan.primary,/整理旧案例/);
+  assert.doesNotMatch(plan.primary,/右 45° 生成会镜像/);
+  assert.match(plan.optional.join("\n"),/右 45° 生成会镜像/);
+  assert.doesNotMatch(plan.optional.join("\n"),/旧问题/);
+});
+
+test("能够识别旧版错误生成的 blocker 主行动", () => {
+  const action=planning.blockerAction("SCOPE FREEZE：本轮禁止新增能力");
+  assert.equal(planning.isBlockerAction(action),true);
+  assert.equal(planning.blockerIssueFromAction(action),"SCOPE FREEZE：本轮禁止新增能力");
+  assert.equal(planning.isBlockerAction("执行一键安装包验收"),false);
 });
 
 test("现状总结只读取当前 Project、OPEN blockers 和允许共享记忆", () => {

@@ -1,9 +1,10 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ignoredDirectories = new Set([".git", "node_modules", "dist", "build", "coverage", ".cache", ".tmp", "tmp"]);
 const textExtensions = new Set([".cmd", ".css", ".html", ".js", ".json", ".md", ".mjs", ".txt"]);
 const selfPath = "scripts/public-audit.mjs";
 const blockedDirectories = new Set(["backup", "backups", "private", "local-data", "demo-recordings"]);
@@ -15,27 +16,26 @@ const contentRules = [
 
 const files = [];
 const problems = [];
+const execFileAsync = promisify(execFile);
 
-async function walk(directory) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
-    const absolute = path.join(directory, entry.name);
-    const relative = path.relative(root, absolute).replaceAll("\\", "/");
-    if (entry.isDirectory()) {
-      if (blockedDirectories.has(entry.name)) problems.push(`${relative}/：不应提交的本地数据目录`);
-      await walk(absolute);
-      continue;
-    }
-    if (blockedFilePatterns.some(pattern => pattern.test(entry.name))) problems.push(`${relative}：不应提交的本地文件`);
-    files.push({ absolute, relative });
-  }
+const { stdout } = await execFileAsync("git", ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"], { encoding:"utf8", maxBuffer:8 * 1024 * 1024 });
+for (const relative of stdout.split("\0").filter(Boolean)) {
+  const normalized = relative.replaceAll("\\", "/");
+  const segments = normalized.split("/");
+  if (segments.slice(0, -1).some(segment => blockedDirectories.has(segment))) problems.push(`${normalized}：不应提交的本地数据文件`);
+  if (blockedFilePatterns.some(pattern => pattern.test(path.basename(normalized)))) problems.push(`${normalized}：不应提交的本地文件`);
+  files.push({ absolute:path.join(root,relative), relative:normalized });
 }
-
-await walk(root);
 
 for (const file of files) {
   if (file.relative === selfPath || !textExtensions.has(path.extname(file.absolute).toLowerCase())) continue;
-  const content = await readFile(file.absolute, "utf8");
+  let content;
+  try {
+    content = await readFile(file.absolute, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") continue;
+    throw error;
+  }
   for (const rule of contentRules) {
     if (rule.pattern.test(content)) problems.push(`${file.relative}：${rule.label}`);
   }

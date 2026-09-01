@@ -1,88 +1,78 @@
-# Project OS 公开版状态
+# Project OS v0.3.0 项目状态
 
-## 当前版本
+> 更新日期：2026-08-31
+> 当前阶段：Windows 本地可运行 MVP
+> 本轮目标：把产品收口为每天可用的“工作进度驾驶舱”，不继续扩功能面。
 
-- 版本：v0.1.0
-- 阶段：Windows 本地可运行 MVP
-- 产品名：项目存档驾驶舱 / Project OS
-- 出品：kiseki 的 AI Lab
-- 许可证：MIT
+## 已完成
 
-## 支持范围
+### 日常主线
 
-- 支持：Windows 10、Windows 11
-- 运行环境：Node.js 20 LTS 或更高版本
-- 数据策略：Local First；浏览器 IndexedDB 自动保存
-- 正式工作区与 Demo Workspace 使用独立存储命名空间
-- JPR 专用 Demo 使用第三个独立命名空间与全虚构日文预设
+- 首页以“昨天做了什么 / 今天该做什么 / 项目卡在哪里”为第一屏主线。
+- 昨日只显示 confirmed Event；待 Review 项不混入正式进度。
+- 今日行动优先恢复未结束 Session，其次读取已确认 next action / in progress / goal。
+- OPEN Blocker 始终可见，直到明确解决、推迟或删除。
+- 失效目录与待 Review 数直接显示，不再藏在设置深处。
 
-## 当前产品闭环
+### 状态与历史
 
-1. 可先在首页使用“总结今天”回看当天任务进展，或展开“灵感库”记录/回看尚未成为任务的想法，再选择主任务。
-2. 进入次级项目并恢复当前状态。
-3. 建立本次工作计划并开始 Session。
-4. 使用“我卡住了”“现状总结”或“总结工作”生成 Prompt；工作总结把本次完成勾选、工作笔记和本次已确认变化作为证据，返回更新后的完整项目结构并逐字段确认写回。
-5. 将 AI JSON 粘贴回应用；应用先核对回答中的当前项目身份，不匹配时不允许进入预览。
-6. 人工编辑、选择需要写入的字段并确认；状态更新后留在当前 Session 继续工作。
-7. 可暂停 Session 返回首页并继续；只有结束 Session 时才返回 Project Resume，并保存工作历史、下一步与专注分钟数。
-8. 下次进入项目时恢复进度。
+- 旧 Project 创建一次 `project_state_baseline`。
+- 自动事件、人工修正、AI 确认和 Session 结束统一记录为可重放 Event。
+- 新增 `manual_patch` 与 `work_log` effect，人工事实不再依赖整份 Project snapshot。
+- 删除 Session 会拒绝对应 work log 并重新投影，避免已删除工作重新污染状态。
+- 历史区分“自动发现且已确认”和“人工工作记录”；设置变更只出现在证据时间线。
+- 证据时间线显示时间、来源、置信度、归属、摘要、Evidence 和变更原因，可撤销或改归属。
 
-## 本地数据与备份
+### Auto Sync 与路径恢复
 
-- IndexedDB 数据库名：`project-archive-cockpit`
-- 正式工作区记录：`workspace:normal`
-- 演示工作区记录：`workspace:demo`
-- JPR 专用演示记录：`workspace:jpr-demo`
-- 活动 Session 草稿：IndexedDB 主状态 + `localStorage` 同步恢复镜像；按 Workspace 与 Session 隔离
-- JSON 导出：从 IndexedDB 读取，经 `exportState()` 与 `serializeState()` 生成下载文件
-- JSON 导入：经 `hydrateBundle()` / `hydrateState()` 校验，预览确认后写回 IndexedDB
-- 云端预留：`storage.js` 中的 `CloudAdapterStub` 与 `SyncProviderStub`，当前禁用
+- 保留 Git、Filesystem、测试报告、分来源 checkpoint、首次 24 小时回看和失败隔离。
+- Project 使用 `sourceBindings[]` 保存稳定 binding ID、canonical path、aliases、identity 与健康状态。
+- Git 身份由安全 remote + root commit 指纹组成；目录移动后同一 commit 的 sourceId 不变。
+- Filesystem index 改用 `projectId:sourceBindingId`，移动路径不重新建立整套索引。
+- 配置路径不可用时按历史别名恢复；恢复或缺失状态回写 Project 并在首页可见。
+- 多目录输入使用精确去重，不再把父目录和子目录误合并。
+- 文件相关性基于稳定来源、明确 work unit、文件重叠与较短 burst；不再用“同目录 + 30 分钟”一把抓。
+- 单文件活动显示具体文件；旧“更新 1 个文件”摘要在读取时自动升级。
 
-## 公开发布检查
+### 项目关系与交互
 
-- 仓库内不携带浏览器 IndexedDB、正式 Workspace 或私人 Memory
-- Demo 与截图只使用虚构示例
-- 不依赖本机用户名或绝对路径
-- `.gitignore` 排除本地备份、数据库、日志和环境文件
-- `npm run check:public` 提供额外扫描
+- 取消迁移时自动创建默认关系。
+- ZoneLink 必须填写原因并选择 scope，固定为 `REFERENCE_ONLY`，不会跨项目写回状态。
+- 旧关系标记为“待重新确认”。
+- Session 支持暂停与恢复；草稿按 workspace + session 镜像到 localStorage。
+- 结束时间可编辑，必须人工勾选确认才计入专注分钟数。
+- Demo、Skills、灵感库退出日常主路径；JPR 专用分叉已删除。
 
-## 当前验证结果
+## 验证状态
 
-- 77 项自动化测试通过（包含四种灵感 AI 球参数完整性、共享 WebGPU 渲染、JPR Demo 隔离、中日文完整项目更新、无证据防臆测、`project_name` 跨项目拦截、状态写回后停留 Session、暂停续接、草稿恢复、首页灵感库、液态状态球渐进增强、人工确认专注时长及实际合计、问题标签、Resume 层级、今日任务总结、导出边界、日文 Prompt 与 UI 检查）
-- Windows 启动脚本 `--check` 通过
-- 本地服务首页返回 HTTP 200
-- 全新浏览器工作区可进入 Demo、载入示例、创建并刷新恢复 Session
-- “我卡住了”、现状总结与工作总结 JSON 解析、项目身份校验、草稿恢复及人工确认流程通过；工作总结现返回完整项目结构，并可在弹窗补录本次真实成果；证据不足时禁止新增完成、资产、记忆或阶段提升；不同 `project_name` 会在预览前被拒绝
-- Session 暂停回首页、Resume 暂停标记、重新进入与笔记恢复已在浏览器验证
-- Project Resume 的行动指示顺序、独立状态面板、问题解决/恢复样式，以及结束时间未确认拦截和分钟数重算已在 JPR Demo 浏览器验证
-- JPR 首页“今日をまとめる”已在浏览器验证：当天 Session 连续编号、暂停状态与未完成任务显示正常；相关项目记忆可展开横向查看，面板不展示专注分钟数
-- JPR 工作总结已在浏览器验证：确认状态写回后仍停留在当前 Session；只有结束工作并确认时间后才返回 Project Resume，控制台无错误或警告
-- JPR 首页“アイデアライブラリ”已在浏览器验证：项目暂存不进入灵感库；首页和 Session 可分别添加独立灵感，AI 球可选中查看来源、收起/展开，刷新后仍保存，并可从 Session 来源返回对应 Project Resume
-- 首页灵感 AI 球已在 WebGPU 浏览器验证：四份导出通过同源着色器桥接正常渲染，四个 Canvas 共享渲染器并全部进入 ready 状态，备用球显示数为 0；球体不覆盖文字，原始灵感标题位于球下方，顶部“今日建议”球继续正常运行
-- 首页“今日建议”液态状态球已在浏览器验证：WebGPU 正常渲染、高清画布尺寸正确、回退层在成功后隐藏、控制台无错误，且不拦截统计卡交互
-- JSON 导出提示、导入文件解析与覆盖前预览通过
-- 浏览器控制台未发现错误或警告
-- 8 张公开截图已复核，只包含虚构 Demo 数据
-- JPR 三分钟路径已在浏览器中完整验证，并生成 5 张全虚构安全截图
+| 检查 | 当前结果 |
+| --- | --- |
+| 语法与全量单元/集成测试 | 105 / 105 通过 |
+| 真实 Git + Test E2E | 3 raw activities → 1 event → 3 evidence；82 / 82 test evidence；completed 投影成功 |
+| Git 仓库移动 | 临时真实仓库移动前后 fingerprint 与 sourceId 相同 |
+| 路径别名恢复 | canonical path 失效后从 alias 恢复，source report 为 available |
+| 多目录隔离 | 两个 source binding 分别维护 index；真实 UI 显示 2 个目录 |
+| 浏览器主流程 | 建 Zone/Project、配置目录、同步、Review、确认、暂停、恢复、结束、删除均通过 |
+| Goal Drift | 设置修改不再触发；旧非进度误报自动拒绝 |
+| Session 删除重放 | 删除后 currentState 回到基线，独立 Blocker 保留 |
+| 关系边界 | 空原因不能保存；保存后显示只读模式、原因和 scope |
+| 公开发布审计 | 仅扫描 Git 将纳入发布的文件，检查通过 |
 
-## JPR Demo 范围
+## 未完成
 
-- 独立入口：`jpr-demo.html`；正式版与通用 Demo 保留在 `index.html`，不再把两种 Demo 放进同一入口
-- 重置：清空 JPR 专用状态并回到 `デモを最初から始める`，由 `JPRデモを開始` 重新载入预设
-- 案例：`業務改善` → `問い合わせ対応の標準化`
-- 页面结构：复用正式版驾驶舱、生命周期标签、任务菜单、追加项目、完整 Resume、项目资料侧栏和 Session 组件，不再使用简化 JPR 渲染分支
-- 日文化：驾驶舱、主任务、追加项目弹窗、Resume、Session、AI 相談、现状整理、工作总结、暂停续接、人工确认和结束 Session 的核心路径
-- AI 回答：不连接真实 API；提供可一键填入的全虚构日文 JSON，继续使用现有人工编辑、逐字段勾选和确认写回机制
-- “本周专注”：JPR 首页继续隐藏；正式版只统计结束时由用户人工确认的分钟数
-- 隔离：JPR 页面初始化时只读写 `workspace:jpr-demo`，不初始化或切换正式 Workspace；刷新可恢复，重置只作用于该命名空间
+- 尚未用真实用户旧备份执行迁移演练；这是进入连续日用前唯一的高价值验证。
+- Codex Activity 没有可靠公开接口，adapter 继续明确显示 unavailable。
+- 非 Git 目录没有内容级稳定身份，只能依赖 binding ID 与历史别名恢复。
+- 嵌套 source path 可能重复扫描，虽会按 sourceId 去重，但设置页尚未主动提示重叠目录。
+- 大目录仍受 10,000 文件、深度 14 的安全上限约束。
+- 没有按周/月回顾、历史搜索、多设备同步或云端账号；这些都不属于当前 MVP 收口范围。
+- macOS / Linux 未适配、未测试。
 
-## 尚未支持
+## 当前状态
 
-- macOS
-- Linux
-- 云同步
-- 多设备
-- Agent API 直连
-- Skills 自动发现
+**本地可运行 MVP，适合进入真实数据迁移与连续 7 天日用验证。**
 
-这些项目均为未实现方向，不属于 v0.1.0 的功能承诺。
+下一步只做两件事：
+
+1. 先导出当前正式备份，再拿一份真实旧备份做恢复/迁移演练。
+2. 连续 7 天记录“昨天 / 今天 / 卡点”，只修阻断日用的问题，不新增产品模块。

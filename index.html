@@ -14,13 +14,14 @@
       <header class="topbar">
         <button class="brand" id="home-button" aria-label="返回主任务首页">
           <span class="brand-mark">存</span>
-          <span><small>KISEKI 的 AI LAB / PROJECT OS</small><strong data-jpr-text="プロジェクト・コックピット">项目存档驾驶舱</strong></span>
+          <span><small>KISEKI 的 AI LAB / PROJECT OS</small><strong>项目存档驾驶舱</strong></span>
         </button>
         <div class="top-actions">
           <span class="demo-environment-badge" id="demo-environment-badge" hidden>DEMO / 演示环境</span>
-          <span class="save-state"><i></i> <span data-jpr-text="ローカル保存済み">本地已保存</span></span>
-          <button class="soft-button" id="tools-button">技能库</button>
-          <button class="soft-button demo-mode-button" id="demo-mode-button">演示模式</button>
+          <span class="save-state"><i></i> 本地已保存</span>
+          <button class="soft-button" id="auto-sync-button">同步最近工作</button>
+          <button class="soft-button" id="tools-button" hidden>技能库</button>
+          <button class="soft-button demo-mode-button" id="demo-mode-button" hidden>演示模式</button>
           <button class="soft-button" id="reset-demo-button" hidden>重置演示数据</button>
           <button class="soft-button" id="export-demo-button" hidden>导出演示状态</button>
           <button class="soft-button header-action-button" id="export-button" title="导出当前本地项目数据（JSON 备份）" aria-label="导出当前本地项目数据（JSON 备份）"><span aria-hidden="true">⇩</span> 导出备份</button>
@@ -34,22 +35,22 @@
 
     <dialog id="add-dialog" class="modal modal-wide">
       <form method="dialog" id="add-form" novalidate>
-        <div class="modal-head"><div><p class="eyebrow" data-jpr-text="新規作成">新建</p><h2 id="add-dialog-title">追加主任务</h2></div><button class="icon-button close" type="button" data-close-dialog="add-dialog" aria-label="关闭" data-jpr-aria="閉じる">×</button></div>
+        <div class="modal-head"><div><p class="eyebrow">新建</p><h2 id="add-dialog-title">追加主任务</h2></div><button class="icon-button close" type="button" data-close-dialog="add-dialog" aria-label="关闭">×</button></div>
         <div class="mode-tabs" role="tablist">
-          <button type="button" class="mode-tab is-active" data-add-mode="manual" data-jpr-text="手動で作成">手动建立</button>
-          <button type="button" class="mode-tab" data-add-mode="bootstrap" data-jpr-text="AIとの対話から取り込む">从 AI 对话导入</button>
+          <button type="button" class="mode-tab is-active" data-add-mode="manual">手动建立</button>
+          <button type="button" class="mode-tab" data-add-mode="bootstrap">手动补充记录</button>
         </div>
         <section id="manual-mode" class="mode-panel">
           <label><span id="name-field-label">主任务名称</span><input id="manual-name" maxlength="80" placeholder="例如：工作、个人产品、学习" /><span class="field-error" id="manual-name-error" hidden>请输入项目名称</span></label>
           <label><span id="purpose-field-label">方向说明</span><textarea id="manual-purpose" maxlength="300" placeholder="这个长期方向是什么？"></textarea></label>
           <label><span id="goal-field-label">母目标</span><input id="manual-goal" maxlength="160" placeholder="这个方向长期要推进什么？" /></label>
-          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog" data-jpr-text="キャンセル">取消</button><button class="primary-button" type="submit" id="create-submit">建立主任务</button></div>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog">取消</button><button class="primary-button" type="submit" id="create-submit">建立主任务</button></div>
         </section>
         <section id="bootstrap-mode" class="mode-panel" hidden>
-          <div class="instruction-card"><span class="step-number">1</span><div><strong data-jpr-text="プロジェクト整理用プロンプトをコピー">复制项目归档提示词</strong><p data-jpr-text="以前の ChatGPT、Codex、DeepSeek などの AI 対話へ送ります。">发给原来的 ChatGPT、Codex、DeepSeek 或其他 AI 对话。</p></div><button type="button" class="soft-button" id="copy-bootstrap" data-jpr-text="プロンプトをコピー">复制提示词</button></div>
-          <label><span data-jpr-text="AIの回答">AI 返回内容</span><textarea id="bootstrap-result" class="large-input" placeholder="把 AI 返回的完整 JSON 粘贴到这里……" data-jpr-placeholder="AIが返した完全なJSONをここに貼り付けます。"></textarea></label>
-          <p class="form-hint" data-jpr-text="指定形式のJSONだけを受け付けます。Markdownや前後の説明は保存されません。">次级项目只接受提示词要求的 JSON；Markdown、代码块或前后说明会被拒绝，也不会写入任何数据。</p>
-          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog" data-jpr-text="キャンセル">取消</button><button class="primary-button" type="button" id="parse-bootstrap" data-jpr-text="プロジェクトの状態を確認">解析项目现状</button></div>
+          <div class="instruction-card"><span class="step-number">1</span><div><strong>复制项目归档提示词</strong><p>发给原来的 ChatGPT、Codex、DeepSeek 或其他 AI 对话。</p></div><button type="button" class="soft-button" id="copy-bootstrap">复制提示词</button></div>
+          <label>AI 返回内容<textarea id="bootstrap-result" class="large-input" placeholder="把 AI 返回的完整 JSON 粘贴到这里……"></textarea></label>
+          <p class="form-hint">仅在 Auto Sync 没捕获到历史工作时使用。次级项目只接受提示词要求的 JSON；确认前不会写入数据。</p>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="add-dialog">取消</button><button class="primary-button" type="button" id="parse-bootstrap">解析项目现状</button></div>
         </section>
       </form>
     </dialog>
@@ -98,22 +99,22 @@
 
     <dialog id="session-dialog" class="modal">
       <form method="dialog" id="session-form" novalidate>
-        <div class="modal-head"><div><p class="eyebrow" data-jpr-text="今回の作業計画">本次工作计划</p><h2 data-jpr-text="今回やることを決める">本次只推进这些</h2></div><button class="icon-button close" type="button" data-close-dialog="session-dialog" aria-label="关闭">×</button></div>
-        <label><span data-jpr-text="今回の目標">本次目标</span><input id="session-goal" /><small class="field-guidance" data-jpr-text="作業後に到達したい状態を、確認できる言葉で記録します。">描述这次工作完成后要达到的结果状态。</small></label>
+        <div class="modal-head"><div><p class="eyebrow">本次工作计划</p><h2>本次只推进这些</h2></div><button class="icon-button close" type="button" data-close-dialog="session-dialog" aria-label="关闭">×</button></div>
+        <label>本次目标<input id="session-goal" /><small class="field-guidance">描述这次工作完成后要达到的结果状态。</small></label>
         <fieldset class="blocker-question">
-          <legend data-jpr-text="今、進行を妨げている問題はありますか？">今天还有什么未解决的问题？</legend>
+          <legend>今天还有什么未解决的问题？</legend>
           <div class="radio-options">
-            <label><input id="session-blocker-none" name="session-blocker-choice" type="radio" value="NONE" checked /> <span data-jpr-text="なし">没有</span></label>
-            <label><input id="session-blocker-yes" name="session-blocker-choice" type="radio" value="YES" /> <span data-jpr-text="あり">有未解决问题</span></label>
+            <label><input id="session-blocker-none" name="session-blocker-choice" type="radio" value="NONE" checked /> 没有</label>
+            <label><input id="session-blocker-yes" name="session-blocker-choice" type="radio" value="YES" /> 有未解决问题</label>
           </div>
-          <label id="session-blocker-input-panel" hidden>当前卡点、未验证问题或风险<textarea id="session-blocker-text" placeholder="例如：右 45° 角色生成仍偶尔发生镜像，痣的位置会左右交换。"></textarea></label>
+          <label id="session-blocker-input-panel" hidden>当前卡点、未验证问题或风险<textarea id="session-blocker-text" placeholder="例如：右 45° 角色生成仍偶尔发生镜像，痣的位置会左右交换。"></textarea><small class="field-guidance">问题会保存到“当前阻塞”，并可作为可选行动；不会覆盖你的主行动，也不会新建或替换项目。</small></label>
         </fieldset>
-        <label><span class="field-badge primary" data-jpr-text="最優先">主行动</span> <span data-jpr-text="最初のアクション">首要行动</span><input id="todo-primary" /></label>
-        <label><span class="field-badge optional" data-jpr-text="任意">可选</span> <span data-jpr-text="次の候補 1">可选行动 1</span><input id="todo-optional-1" /></label>
-        <label><span class="field-badge optional" data-jpr-text="任意">可选</span> <span data-jpr-text="次の候補 2">可选行动 2</span><input id="todo-optional-2" /></label>
+        <label><span class="field-badge primary">主行动</span> 首要行动<input id="todo-primary" /></label>
+        <label><span class="field-badge optional">可选</span> 可选行动 1<input id="todo-optional-1" /></label>
+        <label><span class="field-badge optional">可选</span> 可选行动 2<input id="todo-optional-2" /></label>
         <label class="demo-toggle" id="legacy-session-demo-toggle" hidden><input id="session-demo" type="checkbox" /> <span><strong>旧版单次演示</strong><small>仅用于兼容已有演示记录；新演示请使用右上角独立演示环境。</small></span></label>
-        <p class="form-hint" data-jpr-text="今回の作業は最大3項目に絞り、バックログは展開しません。">进行中事项永远不超过 3 项，待办池不会在本次工作中展开。</p>
-        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="session-dialog" data-jpr-text="キャンセル">取消</button><button class="primary-button" type="submit" data-jpr-text="今回の作業を開始">开始本次工作</button></div>
+        <p class="form-hint">进行中事项永远不超过 3 项，待办池不会在本次工作中展开。</p>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="session-dialog">取消</button><button class="primary-button" type="submit">开始本次工作</button></div>
       </form>
     </dialog>
 
@@ -121,47 +122,44 @@
       <form method="dialog" id="blocker-form" novalidate>
         <div class="modal-head"><div><p class="eyebrow">项目阻塞</p><h2>记录一个问题</h2></div><button class="icon-button close" type="button" data-close-dialog="blocker-dialog" aria-label="关闭">×</button></div>
         <label>问题描述<textarea id="blocker-text" class="large-input" placeholder="描述当前卡点、未验证问题或需要特别注意的风险……"></textarea></label>
-        <label>优先级<select id="blocker-priority"><option value="NORMAL">普通：记录但不自动改变主行动</option><option value="HIGH">高：下次计划优先验证这个问题</option></select></label>
+        <label>优先级<select id="blocker-priority"><option value="NORMAL">普通：只记录问题</option><option value="HIGH">高：下次计划放入可选行动</option></select></label>
         <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="blocker-dialog">取消</button><button class="primary-button" type="submit">保存问题</button></div>
       </form>
     </dialog>
 
     <dialog id="stuck-dialog" class="modal modal-wide">
       <form method="dialog" id="stuck-form" novalidate>
-        <div class="modal-head"><div><p class="eyebrow" data-jpr-text="プロジェクト内の相談">项目内求助</p><h2 data-jpr-text="AIに相談">我卡住了</h2></div><button class="icon-button close" type="button" data-close-dialog="stuck-dialog" aria-label="关闭">×</button></div>
+        <div class="modal-head"><div><p class="eyebrow">项目内求助</p><h2>我卡住了</h2></div><button class="icon-button close" type="button" data-close-dialog="stuck-dialog" aria-label="关闭">×</button></div>
         <section id="stuck-input-panel">
-          <label><span data-jpr-text="何に困っていますか？">卡在哪里？</span><textarea id="stuck-problem" class="large-input" placeholder="用自然语言描述问题，不必整理。" data-jpr-placeholder="整理せず、そのままの言葉で入力してください。"></textarea></label>
-          <label><span data-jpr-text="今回は、どの状態になれば解決ですか？">这次怎样算解决？</span><textarea id="stuck-criteria" placeholder="验收标准，可留空" data-jpr-placeholder="確認条件（任意）"></textarea></label>
-          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="stuck-dialog" data-jpr-text="キャンセル">取消</button><button class="primary-button" type="submit" data-jpr-text="相談用プロンプトを作成">生成求助提示词</button></div>
+          <label>卡在哪里？<textarea id="stuck-problem" class="large-input" placeholder="用自然语言描述问题，不必整理。"></textarea></label>
+          <label>这次怎样算解决？<textarea id="stuck-criteria" placeholder="验收标准，可留空"></textarea></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="stuck-dialog">取消</button><button class="primary-button" type="submit">生成求助提示词</button></div>
         </section>
         <section id="stuck-output-panel" hidden>
-          <label><span data-jpr-text="このプロジェクト専用のプロンプト">项目专属提示词</span><textarea id="stuck-output" class="prompt-output" readonly></textarea></label>
-          <p class="form-hint" data-jpr-text="このプロジェクト、共有を許可した背景、今回の作業だけを含みます。他のプロジェクトの非公開情報は含みません。">只包含当前次级项目、主任务共享背景和本次工作，不会混入其他项目私有记忆。</p>
-          <div class="modal-actions"><button class="text-button" type="button" id="back-to-stuck" data-jpr-text="相談内容を修正">修改问题</button><button class="soft-button" type="button" id="copy-stuck" data-jpr-text="プロンプトをコピー">复制提示词</button><button class="primary-button" type="button" id="save-stuck" data-jpr-text="今回の作業に保存">保存本次提示词</button></div>
+          <label>项目专属提示词<textarea id="stuck-output" class="prompt-output" readonly></textarea></label>
+          <p class="form-hint">只包含当前次级项目、主任务共享背景和本次工作，不会混入其他项目私有记忆。</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="back-to-stuck">修改问题</button><button class="soft-button" type="button" id="copy-stuck">复制提示词</button><button class="primary-button" type="button" id="save-stuck">保存本次提示词</button></div>
         </section>
       </form>
     </dialog>
 
     <dialog id="status-review-dialog" class="modal modal-wide">
       <form method="dialog" id="status-review-form" novalidate>
-        <div class="modal-head"><div><p class="eyebrow" id="status-review-eyebrow" data-jpr-text="プロジェクトの状態確認">项目状态审查</p><h2 id="status-review-title" data-jpr-text="現状を整理">现状总结</h2></div><button class="icon-button close" type="button" data-close-dialog="status-review-dialog" aria-label="关闭" data-jpr-aria="閉じる">×</button></div>
+        <div class="modal-head"><div><p class="eyebrow">项目状态审查</p><h2>现状总结</h2></div><button class="icon-button close" type="button" data-close-dialog="status-review-dialog" aria-label="关闭">×</button></div>
         <section id="status-review-input-panel">
-          <div id="work-summary-evidence-panel" class="work-summary-evidence-panel" hidden>
-            <label><span id="work-summary-evidence-label">本次实际完成了什么</span><textarea id="work-summary-evidence" class="large-input" placeholder="例如：完成 Free / Pro 分装；确认 Skill 的不足；生成并验证一键安装包。"></textarea></label>
-            <p class="form-hint" id="work-summary-evidence-help">这里会同步保存到本次工作笔记，并立即重新生成完整项目更新提示词。外部 Codex 或编辑器中的工作也请写在这里。</p>
-          </div>
-          <label><span id="status-review-prompt-label" data-jpr-text="状態確認プロンプト">状态审查提示词</span><textarea id="status-review-output" class="prompt-output click-to-copy" readonly title="点击提示词即可复制" aria-label="点击复制提示词"></textarea></label>
-          <p class="form-hint" id="status-review-help" data-jpr-text="このプロジェクトと共有を許可した背景だけを含みます。プロンプトをクリックしてコピーできます。">只包含当前次级项目和允许共享的背景。点击提示词即可复制，并要求 AI 只返回一个 JSON 代码块。</p>
-          <div class="modal-actions"><button class="demo-primary" type="button" id="fill-jpr-review-sample" hidden>デモ回答を入力</button><button class="soft-button" type="button" id="copy-status-review" data-jpr-text="プロンプトをコピー">复制提示词</button><button class="text-button" type="button" id="save-status-review" data-jpr-text="今回の作業に保存">保存到本次工作</button></div>
+          <div id="work-summary-evidence" class="tool-rule"><strong>Evidence First</strong>总结只依据本次勾选、笔记、验证结果和已确认项目状态；AI 建议仍需你逐项确认。</div>
+          <label>状态审查提示词<textarea id="status-review-output" class="prompt-output click-to-copy" readonly title="点击复制"></textarea></label>
+          <p class="form-hint">只包含当前次级项目和允许共享的背景，并要求 AI 只返回一个可直接复制的 JSON 代码块。</p>
+          <div class="modal-actions"><button class="soft-button" type="button" id="copy-status-review">复制提示词</button><button class="text-button" type="button" id="save-status-review">保存到本次工作</button></div>
           <div class="status-review-divider"></div>
-          <label><span data-jpr-text="AIの回答">AI 返回结果</span><textarea id="status-review-result" class="large-input" placeholder="将 ChatGPT / Codex / DeepSeek 返回的 JSON 粘贴到这里……" data-jpr-placeholder="AIが返したJSONをここに貼り付けます。"></textarea></label>
-          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="status-review-dialog" data-jpr-text="キャンセル">取消</button><button class="primary-button" type="button" id="parse-status-review" data-jpr-text="AIの提案を確認">解析现状总结</button></div>
+          <label>AI 返回结果<textarea id="status-review-result" class="large-input" placeholder="将 ChatGPT / Codex / DeepSeek 返回的 JSON 粘贴到这里……"></textarea></label>
+          <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="status-review-dialog">取消</button><button class="primary-button" type="button" id="parse-status-review">解析现状总结</button></div>
         </section>
         <section id="status-review-preview-panel" hidden>
-          <div class="result-preview-heading"><p class="eyebrow" data-jpr-text="AIの提案">AI 现状建议</p><h3 data-jpr-text="反映する内容を確認">确认要更新的项目状态</h3></div>
+          <div class="result-preview-heading"><p class="eyebrow">AI 现状建议</p><h3>确认要更新的项目状态</h3></div>
           <div id="status-review-preview" class="update-preview"></div>
-          <p class="form-hint" data-jpr-text="すべてAIの提案です。項目ごとに編集・選択でき、選ばなかった内容はプロジェクトを変更しません。">所有内容都是 AI 建议。每项都可修改并单独决定是否写入；未勾选的字段不会改变现有项目。</p>
-          <div class="modal-actions"><button class="text-button" type="button" id="back-to-status-review" data-jpr-text="回答に戻る">返回修改</button><button class="primary-button" type="button" id="confirm-status-review" data-jpr-text="確認して反映">确认更新项目</button></div>
+          <p class="form-hint">所有内容都是 AI 建议。每项都可修改并单独决定是否写入；未勾选的字段不会改变现有项目。</p>
+          <div class="modal-actions"><button class="text-button" type="button" id="back-to-status-review">返回修改</button><button class="primary-button" type="button" id="confirm-status-review">确认更新项目</button></div>
         </section>
       </form>
     </dialog>
@@ -195,7 +193,31 @@
         <label>名称<input id="task-edit-name" maxlength="80" /></label>
         <label>定位说明<textarea id="task-edit-purpose" maxlength="300"></textarea></label>
         <label><span id="task-edit-goal-label">当前目标</span><input id="task-edit-goal" maxlength="160" /></label>
+        <section id="project-source-settings" class="project-source-settings" hidden>
+          <p class="section-kicker">Auto Sync 数据源</p>
+          <label>项目目录<textarea id="task-edit-source-paths" placeholder="每行一个本地绝对目录，例如 D:\Projects\character-studio"></textarea><small>Project OS 只从已注册目录读取 Git 与增量文件证据。</small></label>
+          <label>归类关键词<input id="task-edit-routing-keywords" placeholder="用逗号分隔，例如 installer, beta, character studio" /></label>
+        </section>
         <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="task-edit-dialog">取消</button><button class="primary-button" type="submit">保存修改</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="auto-sync-review-dialog" class="modal modal-wide auto-sync-review-dialog">
+      <form method="dialog" id="auto-sync-review-form" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">Review Before Merge</p><h2>确认最近工作</h2></div><button class="icon-button close" type="button" data-close-dialog="auto-sync-review-dialog" aria-label="关闭">×</button></div>
+        <div id="auto-sync-review-summary" class="sync-review-summary"></div>
+        <div id="auto-sync-goal-suggestions" class="goal-suggestion-list"></div>
+        <div id="auto-sync-review-list" class="sync-review-list"></div>
+        <p class="form-hint">高置信度项目已预选；文件修改本身不会被解释为任务完成。确认后才会进入正式 Event Log 并更新项目状态。</p>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="auto-sync-review-dialog">稍后处理</button><button class="soft-button" type="button" id="accept-all-sync-events">全部接受可归类项</button><button class="primary-button" type="submit">确认并进入驾驶舱</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="sync-run-dialog" class="modal modal-wide">
+      <form method="dialog" novalidate>
+        <div class="modal-head"><div><p class="eyebrow">Auto Sync 审计</p><h2>最近一次同步详情</h2></div><button class="icon-button close" type="button" data-close-dialog="sync-run-dialog" aria-label="关闭">×</button></div>
+        <div id="sync-run-detail" class="sync-run-detail"></div>
+        <div class="modal-actions"><button class="primary-button" type="button" data-close-dialog="sync-run-dialog">完成</button></div>
       </form>
     </dialog>
 
@@ -222,20 +244,17 @@
 
     <dialog id="end-dialog" class="modal modal-wide">
       <form method="dialog" id="end-form" novalidate>
-        <div class="modal-head"><div><p class="eyebrow" data-jpr-text="今回の作業まとめ">本次工作总结</p><h2 data-jpr-text="今回の作業を終了">结束本次工作</h2></div><button class="icon-button close" type="button" data-close-dialog="end-dialog" aria-label="关闭">×</button></div>
+        <div class="modal-head"><div><p class="eyebrow">本次工作总结</p><h2>结束本次工作</h2></div><button class="icon-button close" type="button" data-close-dialog="end-dialog" aria-label="关闭">×</button></div>
         <div id="end-summary" class="summary-preview"></div>
-        <section class="time-confirmation-panel">
-          <div class="time-confirmation-head"><div><strong data-jpr-text="作業時間を確認">确认工作时间</strong><p data-jpr-text="開始・終了時刻を必要に応じて修正し、確認後に集中時間として記録します。">系统已填写开始和结束时间。需要时可修改，确认后录入专注时长。</p></div><output id="end-focus-duration">0 分钟</output></div>
-          <div class="time-input-grid">
-            <label><span data-jpr-text="開始時刻">开始时间</span><input id="end-started-at" type="datetime-local" /></label>
-            <label><span data-jpr-text="終了時刻">结束时间</span><input id="end-ended-at" type="datetime-local" /></label>
-          </div>
-          <label class="time-confirm-check"><input id="end-time-confirmed" type="checkbox" /><span data-jpr-text="上記の時刻を確認し、集中時間として記録する">我已确认以上时间，并将其录入专注时长</span></label>
-          <p class="field-error" id="end-time-error" hidden></p>
+        <section class="end-time-panel">
+          <div class="end-time-grid"><label>开始时间<input id="end-started-at" type="datetime-local" /></label><label>结束时间<input id="end-ended-at" type="datetime-local" /></label></div>
+          <div class="end-time-summary"><span>计入本周专注</span><strong id="end-focus-duration">0 分钟</strong></div>
+          <label class="confirm-time"><input id="end-time-confirmed" type="checkbox" /> 我已核对这段时间，按人工确认记录</label>
+          <p id="end-time-error" class="field-error" hidden></p>
         </section>
-        <label><span data-jpr-text="今回分かったことを追加">补充本次新发现</span><textarea id="end-discoveries" placeholder="每行一项，可留空" data-jpr-placeholder="1行に1項目（任意）"></textarea></label>
-        <label><span data-jpr-text="次の一歩">下一步</span><input id="end-next-step" /></label>
-        <div class="modal-actions" id="formal-end-actions"><button class="text-button" type="button" data-close-dialog="end-dialog" data-jpr-text="作業を続ける">继续工作</button><button class="primary-button" type="submit" data-jpr-text="まとめを保存">保存工作总结</button></div>
+        <label>补充本次新发现<textarea id="end-discoveries" placeholder="每行一项，可留空"></textarea></label>
+        <label>下一步<input id="end-next-step" /></label>
+        <div class="modal-actions" id="formal-end-actions"><button class="text-button" type="button" data-close-dialog="end-dialog">继续工作</button><button class="primary-button" type="submit">保存工作总结</button></div>
         <section id="demo-end-actions" class="demo-end-panel" hidden>
           <p><strong>这是一次演示工作记录。</strong><br />是否将结果写入正式项目？</p>
           <div class="modal-actions"><button class="text-button" type="button" id="demo-end-keep">仅保存为演示记录</button><button class="primary-button" type="button" id="demo-end-promote">写入正式项目</button><button class="danger-primary" type="button" id="demo-end-delete">直接删除</button></div>
@@ -247,13 +266,14 @@
       <form method="dialog" id="link-form" novalidate>
         <div class="modal-head"><div><p class="eyebrow">背景共享边界</p><h2>管理关联主任务</h2></div><button class="icon-button close" type="button" data-close-dialog="link-dialog" aria-label="关闭">×</button></div>
         <label>关联到<select id="link-target"></select></label>
+        <label>为什么需要共享<textarea id="link-reason" rows="3" placeholder="例如：两个长期方向共同依赖同一套发布数据。"></textarea></label>
         <fieldset class="scope-fieldset"><legend>允许共享</legend>
           <label><input type="checkbox" name="link-scope" value="SHARE_PROGRESS"> 项目里程碑与总体进度</label>
           <label><input type="checkbox" name="link-scope" value="SHARE_CONTENT"> 发布内容</label>
           <label><input type="checkbox" name="link-scope" value="SHARE_METRICS"> 内容表现数据</label>
           <label><input type="checkbox" name="link-scope" value="SHARE_MEMORY"> 主任务共享记忆</label>
         </fieldset>
-        <p class="form-hint">项目私有记忆、技术调试、源代码、内部提示词和完整工作记录默认不共享。</p>
+        <p class="form-hint">只建立可见的只读参考关系。项目状态不会互相写回；私有记忆、技术调试、源代码、内部提示词和完整工作记录默认不共享。</p>
         <div class="modal-actions"><button class="danger-button" type="button" id="remove-link">设为隔离</button><button class="text-button" type="button" data-close-dialog="link-dialog">取消</button><button class="primary-button" type="submit">保存关联</button></div>
       </form>
     </dialog>
@@ -325,9 +345,9 @@
 
     <dialog id="reset-demo-dialog" class="modal">
       <form method="dialog" novalidate>
-        <div class="modal-head"><div><p class="eyebrow demo-eyebrow">演示环境</p><h2 id="reset-demo-title">重置演示数据</h2></div><button class="icon-button close" type="button" data-close-dialog="reset-demo-dialog" aria-label="关闭">×</button></div>
-        <div class="demo-confirm-message"><strong id="reset-demo-message">确定清空全部演示数据并恢复初始 Demo 状态吗？</strong><p id="reset-demo-note">只会重置演示工作区，正式项目存档不会改变。</p></div>
-        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="reset-demo-dialog" id="cancel-reset-demo">取消</button><button class="danger-primary" type="button" id="confirm-reset-demo">重置演示数据</button></div>
+        <div class="modal-head"><div><p class="eyebrow demo-eyebrow">演示环境</p><h2>重置演示数据</h2></div><button class="icon-button close" type="button" data-close-dialog="reset-demo-dialog" aria-label="关闭">×</button></div>
+        <div class="demo-confirm-message"><strong>确定清空全部演示数据并恢复初始 Demo 状态吗？</strong><p>只会重置演示工作区，正式项目存档不会改变。</p></div>
+        <div class="modal-actions"><button class="text-button" type="button" data-close-dialog="reset-demo-dialog">取消</button><button class="danger-primary" type="button" id="confirm-reset-demo">重置演示数据</button></div>
       </form>
     </dialog>
 
@@ -347,6 +367,7 @@
     <script src="bootstrap.js"></script>
     <script src="ai-workflow.js"></script>
     <script src="inspiration-orbs.js"></script>
+    <script src="auto-sync.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

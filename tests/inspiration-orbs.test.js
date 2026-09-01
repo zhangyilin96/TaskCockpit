@@ -7,7 +7,6 @@ const root = path.resolve(__dirname, "..");
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const cssSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const jprSource = fs.readFileSync(path.join(root, "jpr-demo.html"), "utf8");
 const rendererSource = fs.readFileSync(path.join(root, "inspiration-orbs.js"), "utf8");
 const orbSource = fs.readFileSync(path.join(root, "liquid-orb.html"), "utf8");
 
@@ -51,7 +50,6 @@ test("every inspiration persists its orb identity and future AI state", () => {
   assert.match(cssSource, /\.inspiration-orb-title\{display:-webkit-box;[\s\S]*?text-align:center/);
 });
 
-test("both product entry pages load the inspiration orb renderer before the app", () => {
+test("the primary product page loads the optional inspiration renderer before the app", () => {
   assert.ok(indexSource.indexOf('src="inspiration-orbs.js"') < indexSource.indexOf('src="app.js"'));
-  assert.ok(jprSource.indexOf('"inspiration-orbs.js"') < jprSource.indexOf('"app.js"'));
 });
